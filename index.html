@@ -1,0 +1,1485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Zoey & Sassafras Reading Assistant</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Noto+Sans+TC:wght@400;700&display=swap');
+    body { 
+      font-family: 'Fredoka', 'Noto Sans TC', sans-serif; 
+      background-color: #fdfbeb; 
+      -webkit-tap-highlight-color: transparent;
+    }
+    
+    .vocab-badge { cursor: pointer; transition: all 0.2s ease; }
+    .vocab-badge:hover { transform: translateY(-2px); }
+
+    /* Sentence reading active row glow */
+    .sentence-playing {
+      background-color: #fef3c7 !important;
+      box-shadow: 0 0 0 2px #f59e0b, 0 8px 16px -2px rgba(245, 158, 11, 0.15) !important;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* Word-level Karaoke sync highlight with Speechify timestamps */
+    .karaoke-highlight {
+      background-color: #10b981 !important; 
+      color: #ffffff !important; 
+      transform: scale(1.08); 
+      display: inline-block;
+      border-radius: 0.375rem;
+      padding: 0 0.25rem;
+      box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.3);
+      transition: all 0.08s ease-in-out;
+    }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #fcd34d; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #fbbf24; }
+
+    /* Quiz Option Styling */
+    .quiz-option { transition: all 0.2s ease; }
+    .quiz-option.selected { border-color: #3b82f6; background-color: #eff6ff; }
+    .quiz-option.correct { border-color: #10b981; background-color: #ecfdf5; color: #065f46; }
+    .quiz-option.incorrect { border-color: #ef4444; background-color: #fef2f2; color: #991b1b; }
+    .quiz-option:disabled { cursor: not-allowed; }
+  </style>
+
+  <script>
+    window.chaptersData = [];
+    window.quizzesData = {}; 
+  </script>
+
+  <!-- External Chapter context data files -->
+  <script src="book/1/context/chapter1.js"></script>
+  <script src="book/1/context/chapter2.js"></script>
+  <script src="book/1/context/chapter3.js"></script>
+  <script src="book/1/context/chapter4.js"></script>
+  <script src="book/1/context/chapter5.js"></script>
+  <script src="book/1/context/chapter6.js"></script>
+  <script src="book/1/context/chapter7.js"></script>
+  <script src="book/1/context/chapter8.js"></script>
+  <script src="book/1/context/chapter9.js"></script>
+  <script src="book/1/context/chapter10.js"></script>
+  <script src="book/1/context/chapter11.js"></script>
+  <script src="book/1/context/chapter12.js"></script>
+  <script src="book/1/context/chapter13.js"></script>
+  <script src="book/1/context/chapter14.js"></script>
+  <script src="book/1/context/chapter15.js"></script>
+  <script src="book/1/context/chapter16.js"></script>
+
+  <!-- External Chapter quiz data files -->
+  <script src="book/1/quiz/quiz1.js"></script>
+  <script src="book/1/quiz/quiz2.js"></script>
+  <script src="book/1/quiz/quiz3.js"></script>
+  <script src="book/1/quiz/quiz4.js"></script>
+  <script src="book/1/quiz/quiz5.js"></script>
+  <script src="book/1/quiz/quiz6.js"></script>
+  <script src="book/1/quiz/quiz7.js"></script>
+  <script src="book/1/quiz/quiz8.js"></script>
+  <script src="book/1/quiz/quiz9.js"></script>
+  <script src="book/1/quiz/quiz10.js"></script>
+  <script src="book/1/quiz/quiz11.js"></script>
+  <script src="book/1/quiz/quiz12.js"></script>
+  <script src="book/1/quiz/quiz13.js"></script>
+  <script src="book/1/quiz/quiz14.js"></script>
+  <script src="book/1/quiz/quiz15.js"></script>
+  <script src="book/1/quiz/quiz16.js"></script>
+</head>
+
+<body class="text-slate-800 min-h-screen p-4 md:p-6 flex flex-col">
+  <div class="max-w-6xl w-full mx-auto flex flex-col md:flex-row justify-between items-center bg-white p-4 rounded-2xl shadow-sm border-2 border-amber-200 mb-6 gap-4 flex-shrink-0">
+    <div class="flex items-center space-x-3">
+      <span class="text-3xl">🐉</span>
+      <div>
+        <h1 class="text-xl font-bold text-amber-900">Zoey & Sassafras Assistant</h1>
+        <p class="text-xs text-amber-700">Magical Animal Rescue Diary • Voice: Victoria (Synced Highlighting)</p>
+      </div>
+    </div>
+    
+    <div class="flex items-center space-x-3 flex-wrap justify-end">
+      <!-- Auto-save Status Indicator -->
+      <div id="saveStatusContainer" class="flex items-center bg-emerald-50 px-3 py-2 rounded-xl border border-emerald-200 transition-colors">
+        <span id="saveStatus" class="text-xs font-bold text-emerald-600">💾 Progress Saved</span>
+      </div>
+
+      <!-- Score Display -->
+      <div class="flex items-center space-x-2 bg-amber-100 px-4 py-2 rounded-full shadow-inner">
+        <span class="text-lg">⭐</span>
+        <span id="score" class="font-bold text-amber-800 text-lg">0</span>
+        <span class="text-xs text-amber-700 font-bold">Points</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="max-w-6xl w-full mx-auto flex flex-col md:flex-row gap-6 flex-1 min-h-0">
+    <!-- Left Sidebar: Chapter List -->
+    <div class="w-full md:w-64 shrink-0 flex flex-col gap-2 bg-white p-4 rounded-3xl shadow-sm border-2 border-amber-100 overflow-y-auto" id="chapterList">
+    </div>
+
+    <!-- Right Content Area -->
+    <div class="flex-1 flex flex-col min-w-0">
+      <!-- Navigation Tabs -->
+      <div class="flex space-x-3 mb-4 pt-2 pb-2 z-10 overflow-x-auto flex-shrink-0 px-1">
+        <button onclick="switchTab('reader')" id="tabReader" class="flex-1 py-3 px-4 rounded-2xl font-bold bg-amber-500 text-white shadow-md transition-transform active:scale-95 whitespace-nowrap">📖 Read Story</button>
+        <button onclick="switchTab('game')" id="tabGame" class="flex-1 py-3 px-4 rounded-2xl font-bold bg-white text-amber-700 border-2 border-amber-200 transition-transform active:scale-95 whitespace-nowrap">🧩 Grammar Puzzle</button>
+        <button onclick="switchTab('quiz')" id="tabQuiz" class="flex-1 py-3 px-4 rounded-2xl font-bold bg-white text-amber-700 border-2 border-amber-200 transition-transform active:scale-95 whitespace-nowrap">📝 Chapter Quiz</button>
+        <button onclick="switchTab('fitb')" id="tabFitb" class="flex-1 py-3 px-4 rounded-2xl font-bold bg-white text-amber-700 border-2 border-amber-200 transition-transform active:scale-95 whitespace-nowrap">✏️ Fill in the Blank</button>
+      </div>
+
+      <!-- Scrollable Main Container -->
+      <div class="flex-1 overflow-y-auto px-1 pb-10">
+        
+        <!-- Module 1: Reader View -->
+        <div id="readerView" class="space-y-4">
+          <div class="bg-white p-6 md:p-8 rounded-3xl shadow-sm border-2 border-amber-100">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 border-b border-amber-100 pb-4 gap-4">
+              <div>
+                <span id="displayChapterNum" class="text-xs uppercase font-bold tracking-widest text-amber-600">Chapter 1</span>
+                <h2 id="displayChapterTitle" class="text-3xl font-bold text-slate-800 mt-1">Loading...</h2>
+              </div>
+              <div class="flex items-center gap-3 flex-wrap">
+                <!-- Font Size Adjuster Controls -->
+                <div class="flex items-center bg-amber-50 border border-amber-200 rounded-xl px-2 py-1 shadow-sm">
+                  <span class="text-xs font-bold text-amber-800 mr-2 select-none">Aa</span>
+                  <button onclick="adjustFontSize(-2)" class="w-8 h-8 flex items-center justify-center rounded-lg bg-white border border-amber-200 text-amber-900 font-bold hover:bg-amber-100 active:scale-90 transition-all text-base shadow-xs" title="Decrease Font Size" aria-label="Decrease Font Size">－</button>
+                  <span id="fontSizeDisplay" class="text-xs font-bold text-amber-800 px-2 select-none min-w-[42px] text-center">20px</span>
+                  <button onclick="adjustFontSize(2)" class="w-8 h-8 flex items-center justify-center rounded-lg bg-white border border-amber-200 text-amber-900 font-bold hover:bg-amber-100 active:scale-90 transition-all text-base shadow-xs" title="Increase Font Size" aria-label="Increase Font Size">＋</button>
+                </div>
+                <button onclick="toggleAllTranslations()" class="text-sm bg-amber-100 hover:bg-amber-200 text-amber-800 font-bold px-4 py-2 rounded-xl transition-colors">
+                  Toggle Translations
+                </button>
+              </div>
+            </div>
+            <div id="sentencesContainer" class="space-y-3"></div>
+          </div>
+        </div>
+
+        <!-- Module 2: Grammar Puzzle Game -->
+        <div id="gameView" class="hidden">
+          <div class="bg-white p-6 md:p-8 rounded-3xl shadow-sm border-2 border-indigo-100">
+            <div class="mb-6 border-b border-indigo-100 pb-4">
+              <span class="text-xs uppercase font-bold tracking-widest text-indigo-600">Grammar Puzzle</span>
+              <h3 class="text-2xl font-bold text-slate-800 mt-1">Build the Sentence!</h3>
+              <p class="text-sm text-slate-500 mt-1">Click the blocks below to put the sentence in the correct order:</p>
+            </div>
+            <div id="dropZone" class="min-h-[80px] bg-indigo-50 border-2 border-dashed border-indigo-200 rounded-2xl p-4 flex flex-wrap gap-2 items-center mb-8">
+              <span id="dropPlaceholder" class="text-sm text-indigo-400">Click words below to place them here...</span>
+            </div>
+            <div id="wordsBank" class="flex flex-wrap gap-3 mb-8"></div>
+            <div class="flex justify-between items-center pt-4 border-t border-slate-100">
+              <p id="feedbackText" class="text-base font-bold"></p>
+              <button onclick="checkSentence()" class="bg-indigo-500 hover:bg-indigo-600 text-white font-bold px-8 py-3 rounded-xl shadow-md transition-transform active:scale-95">
+                Check Answer ✓
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Module 3: Chapter Quiz View -->
+        <div id="quizView" class="hidden">
+           <div class="bg-white p-6 md:p-8 rounded-3xl shadow-sm border-2 border-blue-100">
+            <div class="mb-6 border-b border-blue-100 pb-4 flex justify-between items-end">
+              <div>
+                  <span class="text-xs uppercase font-bold tracking-widest text-blue-600">Reading Comprehension</span>
+                  <h3 class="text-2xl font-bold text-slate-800 mt-1">Chapter Quiz</h3>
+                  <p class="text-sm text-slate-500 mt-1">Test your memory of this chapter!</p>
+              </div>
+              <div class="text-right">
+                  <span class="text-sm font-bold text-slate-500">Question <span id="currentQuizNumber" class="text-blue-600 text-lg">1</span> of <span id="totalQuizNumber">12</span></span>
+              </div>
+            </div>
+            
+            <div id="quizContainer">
+                <div class="mb-6">
+                    <h4 id="quizQuestionText" class="text-xl font-semibold text-slate-800 leading-snug">Loading question...</h4>
+                </div>
+                <div id="quizOptionsContainer" class="space-y-3"></div>
+            </div>
+
+            <div id="quizFeedbackContainer" class="mt-6 p-4 rounded-xl hidden">
+                <p id="quizFeedbackResult" class="font-bold text-lg mb-1"></p>
+                <p id="quizRationaleText" class="text-sm text-slate-600"></p>
+            </div>
+
+            <div class="flex flex-col sm:flex-row justify-between items-center pt-6 mt-6 border-t border-slate-100">
+                <div class="flex space-x-3 mb-4 sm:mb-0 w-full sm:w-auto">
+                    <button id="btnShowAnswer" onclick="showQuizAnswer()" class="flex-1 sm:flex-none bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold px-6 py-3 rounded-xl shadow-sm transition-transform active:scale-95 text-sm hidden">
+                        Reveal Answer
+                    </button>
+                </div>
+                <button id="btnNextQuiz" onclick="nextQuizQuestion()" class="bg-blue-500 hover:bg-blue-600 text-white font-bold px-8 py-3 rounded-xl shadow-md transition-transform active:scale-95 w-full sm:w-auto text-lg hidden">
+                  Next Question ➡️
+                </button>
+                <button id="btnSubmitQuiz" onclick="submitQuizAnswer()" class="bg-amber-500 hover:bg-amber-600 text-white font-bold px-8 py-3 rounded-xl shadow-md transition-transform active:scale-95 w-full sm:w-auto text-lg">
+                  Submit Answer ✓
+                </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Module 4: Fill in the Blank View -->
+        <div id="fitbView" class="hidden">
+           <div class="bg-white p-6 md:p-8 rounded-3xl shadow-sm border-2 border-fuchsia-100">
+            <div class="mb-6 border-b border-fuchsia-100 pb-4 flex justify-between items-end">
+              <div>
+                  <span class="text-xs uppercase font-bold tracking-widest text-fuchsia-600">Vocabulary Check</span>
+                  <h3 class="text-2xl font-bold text-slate-800 mt-1">Fill in the Blank</h3>
+                  <p class="text-sm text-slate-500 mt-1">Choose the correct word to complete the sentence.</p>
+              </div>
+              <div class="text-right">
+                  <span class="text-sm font-bold text-slate-500">Question <span id="currentFitbNumber" class="text-fuchsia-600 text-lg">1</span> of <span id="totalFitbNumber">12</span></span>
+              </div>
+            </div>
+            
+            <div id="fitbContainer">
+                <div class="mb-6">
+                    <h4 id="fitbQuestionText" class="text-xl font-semibold text-slate-800 leading-snug">Loading question...</h4>
+                </div>
+                <div id="fitbOptionsContainer" class="space-y-3"></div>
+            </div>
+
+            <div id="fitbFeedbackContainer" class="mt-6 p-4 rounded-xl hidden">
+                <p id="fitbFeedbackResult" class="font-bold text-lg mb-1"></p>
+                <p id="fitbRationaleText" class="text-sm text-slate-600"></p>
+            </div>
+
+            <div class="flex flex-col sm:flex-row justify-between items-center pt-6 mt-6 border-t border-slate-100">
+                <div class="flex space-x-3 mb-4 sm:mb-0 w-full sm:w-auto">
+                    <button id="btnShowFitbAnswer" onclick="showFitbAnswer()" class="flex-1 sm:flex-none bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold px-6 py-3 rounded-xl shadow-sm transition-transform active:scale-95 text-sm hidden">
+                        Reveal Answer
+                    </button>
+                </div>
+                <button id="btnNextFitb" onclick="nextFitbQuestion()" class="bg-fuchsia-500 hover:bg-fuchsia-600 text-white font-bold px-8 py-3 rounded-xl shadow-md transition-transform active:scale-95 w-full sm:w-auto text-lg hidden">
+                  Next Question ➡️
+                </button>
+                <button id="btnSubmitFitb" onclick="submitFitbAnswer()" class="bg-amber-500 hover:bg-amber-600 text-white font-bold px-8 py-3 rounded-xl shadow-md transition-transform active:scale-95 w-full sm:w-auto text-lg">
+                  Submit Answer ✓
+                </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <div id="vocabModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center hidden p-4 z-50">
+    <div class="bg-white max-w-sm w-full p-8 rounded-3xl shadow-2xl border-2 border-amber-300 text-center relative overflow-hidden">
+      <div class="absolute top-0 left-0 w-full h-2 bg-amber-400"></div>
+      <div class="text-5xl mb-3 mt-2" id="vEmoji">🔍</div>
+      <h4 id="vWord" class="text-3xl font-bold text-slate-800 mb-1">Word</h4>
+      <p id="vPhonetic" class="text-sm text-amber-600 font-mono mb-4">/phonetic/</p>
+      <div class="bg-amber-50 p-4 rounded-2xl border border-amber-200 mb-6">
+        <p id="vMeaning" class="text-lg font-bold text-slate-700">Definition</p>
+      </div>
+      <div class="flex space-x-3">
+        <button id="btnModalListen" onclick="speakWord(currentWord)" class="flex-1 bg-amber-500 text-white font-bold py-3 rounded-xl hover:bg-amber-600 transition-colors flex items-center justify-center space-x-2">
+          <span id="modalAudioIcon">🔊</span>
+          <span>Listen</span>
+        </button>
+        <button onclick="closeVocabModal()" class="flex-1 bg-slate-100 text-slate-600 font-bold py-3 rounded-xl hover:bg-slate-200 transition-colors">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dedicated iPad Safari audio player -->
+  <audio id="speechifyAudioPlayer" playsinline preload="auto" class="hidden"></audio>
+
+  <!-- Diagnostic Toast Banner for iPad / Netlify Errors -->
+  <div id="ttsErrorBanner" class="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 max-w-md bg-rose-600 text-white p-4 rounded-2xl shadow-xl z-50 text-sm hidden transition-all">
+    <div class="flex items-start justify-between gap-2">
+      <div>
+        <p class="font-bold mb-1">⚠️ Speechify 語音連線提示</p>
+        <p id="ttsErrorMessage" class="text-xs text-rose-100 leading-relaxed"></p>
+      </div>
+      <button onclick="dismissTtsBanner()" class="text-white hover:text-rose-200 text-lg font-bold px-2 py-0.5">✕</button>
+    </div>
+  </div>
+
+  <script>
+    let currentChapterIndex = 0; 
+    let showAllZh = true;
+    let score = 0;
+    let currentWord = "";
+    
+    // User adjustable font size (in pixels)
+    let currentFontSize = 20;
+    const MIN_FONT_SIZE = 14;
+    const MAX_FONT_SIZE = 34;
+
+    let puzzleStep = 0;
+    let selectedBlocks = [];
+    
+    let currentQuizIndex = 0;
+    let currentQuizQuestions = [];
+    let selectedQuizOption = null;
+    let quizRewarded = {}; 
+
+    let currentFitbIndex = 0;
+    let currentFitbQuestions = [];
+    let selectedFitbOption = null;
+    let fitbRewarded = {}; 
+    
+    // Per-chapter persistence state table
+    let chaptersState = {};
+
+    let currentlyPlayingIndex = -1;
+    let syncAnimFrameId = null;
+
+    // Cache stores: { audio_data: string, speech_marks: object }
+    const audioCache = new Map();
+
+    function showTtsError(msg) {
+      const banner = document.getElementById('ttsErrorBanner');
+      const textEl = document.getElementById('ttsErrorMessage');
+      if (banner && textEl) {
+        textEl.textContent = msg;
+        banner.classList.remove('hidden');
+      }
+    }
+
+    function dismissTtsBanner() {
+      const banner = document.getElementById('ttsErrorBanner');
+      if (banner) banner.classList.add('hidden');
+    }
+
+    // Helper to get or initialize persistent state for a chapter
+    function getChapterState(chIdx) {
+      if (!chaptersState[chIdx]) {
+        chaptersState[chIdx] = {
+          puzzleStep: 0,
+          quiz: {
+            currentIndex: 0,
+            isCompleted: false
+          },
+          fitb: {
+            questions: null,
+            currentIndex: 0,
+            isCompleted: false
+          }
+        };
+      }
+      return chaptersState[chIdx];
+    }
+
+    function loadFromLocalStorage() {
+      try {
+        const savedData = localStorage.getItem('zoeySassafrasProgress_v8');
+        if (savedData) {
+          const parsedData = JSON.parse(savedData);
+          score = parsedData.score || 0;
+          quizRewarded = parsedData.quizRewarded || {};
+          fitbRewarded = parsedData.fitbRewarded || {};
+          chaptersState = parsedData.chaptersState || {};
+          if (parsedData.fontSize) {
+            currentFontSize = parsedData.fontSize;
+          }
+          document.getElementById('score').textContent = score;
+        }
+        updateSaveStatus(true);
+      } catch (error) {
+        console.error("Failed to load progress from localStorage:", error);
+        updateSaveStatus(false, true);
+      }
+      updateFontSizeUI();
+    }
+
+    function saveToLocalStorage() {
+      try {
+        const saveData = {
+          score: score,
+          quizRewarded: quizRewarded,
+          fitbRewarded: fitbRewarded,
+          chaptersState: chaptersState,
+          fontSize: currentFontSize
+        };
+        localStorage.setItem('zoeySassafrasProgress_v8', JSON.stringify(saveData));
+        
+        const statusBox = document.getElementById('saveStatusContainer');
+        statusBox.classList.add('bg-emerald-100', 'border-emerald-300');
+        setTimeout(() => {
+          statusBox.classList.remove('bg-emerald-100', 'border-emerald-300');
+        }, 800);
+      } catch (error) {
+        console.error("Auto-save to localStorage failed", error);
+        updateSaveStatus(false, true);
+      }
+    }
+
+    // --- Font Size Adjustment Controls ---
+    function adjustFontSize(delta) {
+      const newSize = currentFontSize + delta;
+      if (newSize >= MIN_FONT_SIZE && newSize <= MAX_FONT_SIZE) {
+        currentFontSize = newSize;
+        applyFontSize();
+        updateFontSizeUI();
+        saveToLocalStorage();
+      }
+    }
+
+    function updateFontSizeUI() {
+      const display = document.getElementById('fontSizeDisplay');
+      if (display) {
+        display.textContent = `${currentFontSize}px`;
+      }
+    }
+
+    function applyFontSize() {
+      // Scale English sentences
+      document.querySelectorAll('#sentencesContainer p[id^="sentence-en-"]').forEach(el => {
+        el.style.fontSize = `${currentFontSize}px`;
+        el.style.lineHeight = `${Math.round(currentFontSize * 1.55)}px`;
+      });
+      // Proportionally scale Chinese translation text
+      const zhSize = Math.max(13, Math.round(currentFontSize * 0.78));
+      document.querySelectorAll('#sentencesContainer .zh-text').forEach(el => {
+        el.style.fontSize = `${zhSize}px`;
+        el.style.lineHeight = `${Math.round(zhSize * 1.5)}px`;
+      });
+    }
+
+    function updateSaveStatus(isSuccess, isError = false) {
+      const statusText = document.getElementById('saveStatus');
+      const statusBox = document.getElementById('saveStatusContainer');
+      
+      if (isError) {
+        statusText.textContent = "❌ Save Error";
+        statusText.className = "text-xs font-bold text-rose-600";
+        statusBox.className = "flex items-center bg-rose-50 px-3 py-2 rounded-xl border border-rose-200 transition-colors";
+      } else {
+        statusText.textContent = "💾 Progress Saved";
+        statusText.className = "text-xs font-bold text-emerald-600";
+        statusBox.className = "flex items-center bg-emerald-50 px-3 py-2 rounded-xl border border-emerald-200 transition-colors";
+      }
+    }
+
+    function addScore(points) {
+      score += points;
+      document.getElementById('score').textContent = score;
+      saveToLocalStorage(); 
+    }
+
+    function renderChapterList() {
+      const listContainer = document.getElementById('chapterList');
+      listContainer.innerHTML = '<div class="text-xs uppercase font-bold tracking-widest text-amber-600 mb-2 pl-2 pt-2">Chapters</div>';
+      
+      if (!window.chaptersData || window.chaptersData.length === 0) {
+        listContainer.innerHTML += '<div class="p-4 text-sm text-slate-500">Loading chapters...</div>';
+        return;
+      }
+
+      window.chaptersData.forEach((ch, index) => {
+        const btn = document.createElement('button');
+        const isActive = index === currentChapterIndex;
+        
+        btn.className = `w-full text-left px-4 py-3 rounded-2xl transition-all duration-200 flex flex-col ${
+          isActive ? 'bg-amber-100 border-2 border-amber-300 shadow-sm' : 'bg-transparent border-2 border-transparent hover:bg-slate-50 text-slate-500 hover:text-slate-700'
+        }`;
+        
+        btn.onclick = () => loadChapter(index);
+        
+        btn.innerHTML = `
+          <span class="text-xs font-bold ${isActive ? 'text-amber-600' : 'text-slate-400'}">Ch ${ch.chapterId}</span>
+          <span class="text-sm font-bold truncate ${isActive ? 'text-amber-900' : ''}">${ch.titleEn}</span>
+        `;
+        listContainer.appendChild(btn);
+      });
+    }
+
+    function loadChapter(index) {
+      if (!window.chaptersData || window.chaptersData.length <= index) return;
+
+      stopAudioPlayback();
+      currentChapterIndex = index;
+      
+      // Load saved puzzle step for this chapter
+      const chState = getChapterState(currentChapterIndex);
+      puzzleStep = chState.puzzleStep || 0;
+      
+      document.getElementById('displayChapterNum').textContent = `Chapter ${window.chaptersData[index].chapterId}`;
+      document.getElementById('displayChapterTitle').textContent = window.chaptersData[index].titleEn;
+
+      renderChapterList(); 
+      initReader();        
+      
+      if(!document.getElementById('gameView').classList.contains('hidden')) {
+        initPuzzle();      
+      }
+      if(!document.getElementById('quizView').classList.contains('hidden')) {
+        renderQuiz();      
+      }
+      if(!document.getElementById('fitbView').classList.contains('hidden')) {
+        renderFitb();      
+      }
+    }
+
+    function buildSentenceHTML(text, vocab, index) {
+      const regex = /([a-zA-Z0-9_'-]+|[^a-zA-Z0-9_'-]+)/g; 
+      const tokens = text.match(regex);
+      let html = "";
+      let charOffset = 0;
+      
+      tokens.forEach(token => {
+        if (/^[a-zA-Z0-9_'-]+$/.test(token)) {
+          const cleanWord = token.toLowerCase();
+          const isVocab = vocab && (vocab[cleanWord] || vocab[token]);
+          const baseClass = "word-token transition-all duration-75 rounded px-0.5";
+          const start = charOffset;
+          const end = charOffset + token.length;
+          
+          if (isVocab) {
+            html += `<span class="${baseClass} vocab-badge bg-amber-200 text-amber-900 font-bold underline decoration-amber-400" data-start="${start}" data-end="${end}" onclick="showVocab('${token}', ${index})">${token}</span>`;
+          } else {
+            html += `<span class="${baseClass}" data-start="${start}" data-end="${end}">${token}</span>`;
+          }
+        } else {
+          html += token;
+        }
+        charOffset += token.length;
+      });
+      return html;
+    }
+
+    function initReader() {
+      const container = document.getElementById('sentencesContainer');
+      container.innerHTML = "";
+      
+      if (!window.chaptersData || window.chaptersData.length === 0) return;
+      const currentContent = window.chaptersData[currentChapterIndex].content;
+
+      currentContent.forEach((item, index) => {
+        const row = document.createElement('div');
+        row.id = `sentence-row-${index}`;
+        row.className = "p-4 md:p-5 rounded-2xl hover:bg-amber-50/60 transition-all border border-transparent hover:border-amber-200 mb-1";
+        
+        const processedEnHTML = buildSentenceHTML(item.en, item.vocab, index);
+
+        row.innerHTML = `
+          <div class="flex items-start justify-between gap-4">
+            <div class="flex-1">
+              <p id="sentence-en-${index}" class="text-slate-800 font-medium">${processedEnHTML}</p>
+              <p class="zh-text text-slate-500 mt-2 font-normal ${showAllZh ? '' : 'hidden'}">${item.zh}</p>
+            </div>
+            <div class="flex space-x-2 shrink-0">
+              <button id="btn-speak-${index}" onclick="speakSentence(${index})" class="p-3 bg-amber-100 hover:bg-amber-200 text-amber-800 rounded-xl text-lg transition-transform active:scale-95 shadow-sm min-w-[48px] flex items-center justify-center" title="Read Aloud with Victoria">
+                <span>🔊</span>
+              </button>
+              <button onclick="toggleRowZh(this)" class="p-3 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-lg transition-transform active:scale-95 shadow-sm" title="Show Translation">🌐</button>
+            </div>
+          </div>
+        `;
+        container.appendChild(row);
+      });
+
+      applyFontSize();
+    }
+
+    function stopAudioPlayback() {
+      if (syncAnimFrameId) {
+        cancelAnimationFrame(syncAnimFrameId);
+        syncAnimFrameId = null;
+      }
+      const player = document.getElementById('speechifyAudioPlayer');
+      if (player) {
+        player.pause();
+        player.currentTime = 0;
+      }
+      window.speechSynthesis.cancel();
+      if (currentlyPlayingIndex !== -1) {
+        clearSentenceHighlight(currentlyPlayingIndex);
+        resetSentenceButton(currentlyPlayingIndex);
+        currentlyPlayingIndex = -1;
+      }
+      resetModalButton();
+    }
+
+    function clearSentenceHighlight(index) {
+      const row = document.getElementById(`sentence-row-${index}`);
+      if (row) {
+        row.classList.remove('sentence-playing');
+      }
+      clearWordHighlights(index);
+    }
+
+    function clearWordHighlights(index) {
+      if (index === -1) return;
+      document.querySelectorAll(`#sentence-en-${index} .word-token`).forEach(el => {
+        el.classList.remove('karaoke-highlight');
+      });
+    }
+
+    function resetSentenceButton(index) {
+      const btn = document.getElementById(`btn-speak-${index}`);
+      if (btn) {
+        btn.innerHTML = '<span>🔊</span>';
+      }
+    }
+
+    function resetModalButton() {
+      const icon = document.getElementById('modalAudioIcon');
+      if (icon) icon.textContent = '🔊';
+    }
+
+    // Speech Marks synchronized word-level highlighting
+    function startWordSyncLoop(index, speechMarks) {
+      const player = document.getElementById('speechifyAudioPlayer');
+      const chunks = (speechMarks && speechMarks.chunks) ? speechMarks.chunks : [];
+      const wordElements = Array.from(document.querySelectorAll(`#sentence-en-${index} .word-token`));
+
+      if (chunks.length === 0 || wordElements.length === 0) return;
+
+      let lastActiveIndex = -1;
+
+      function update() {
+        if (player.paused || player.ended || currentlyPlayingIndex !== index) {
+          clearWordHighlights(index);
+          return;
+        }
+
+        const currentMs = player.currentTime * 1000;
+
+        let activeChunk = null;
+        for (let i = 0; i < chunks.length; i++) {
+          const chunk = chunks[i];
+          if (currentMs >= chunk.start_time && currentMs <= chunk.end_time) {
+            activeChunk = chunk;
+            break;
+          }
+        }
+
+        if (activeChunk) {
+          let matchedIndex = -1;
+          for (let i = 0; i < wordElements.length; i++) {
+            const start = parseInt(wordElements[i].getAttribute('data-start'));
+            const end = parseInt(wordElements[i].getAttribute('data-end'));
+            if (activeChunk.start !== undefined && activeChunk.end !== undefined) {
+              if (start <= activeChunk.start && end >= activeChunk.end) {
+                matchedIndex = i;
+                break;
+              }
+              if (Math.abs(start - activeChunk.start) <= 1) {
+                matchedIndex = i;
+                break;
+              }
+            }
+          }
+
+          if (matchedIndex !== -1 && matchedIndex !== lastActiveIndex) {
+            clearWordHighlights(index);
+            wordElements[matchedIndex].classList.add('karaoke-highlight');
+            lastActiveIndex = matchedIndex;
+          }
+        }
+
+        syncAnimFrameId = requestAnimationFrame(update);
+      }
+
+      syncAnimFrameId = requestAnimationFrame(update);
+    }
+
+    // Play text using Speechify with full word highlight support
+    async function playSpeechifyText(text, index = -1, isWord = false) {
+      stopAudioPlayback();
+
+      const btn = !isWord ? document.getElementById(`btn-speak-${index}`) : null;
+      const modalIcon = isWord ? document.getElementById('modalAudioIcon') : null;
+
+      if (btn) {
+        btn.innerHTML = '<span class="inline-block w-5 h-5 border-2 border-amber-600 border-t-transparent rounded-full animate-spin"></span>';
+      }
+      if (modalIcon) {
+        modalIcon.innerHTML = '<span class="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>';
+      }
+
+      let cached = audioCache.get(text);
+
+      if (!cached) {
+        try {
+          const response = await fetch('/.netlify/functions/speak', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text: text })
+          });
+
+          const result = await response.json().catch(() => ({}));
+
+          if (!response.ok) {
+            const errDetail = result.error || `HTTP ${response.status}`;
+            throw new Error(errDetail);
+          }
+
+          if (result.audio_data) {
+            cached = {
+              audio_data: result.audio_data,
+              speech_marks: result.speech_marks || null
+            };
+            audioCache.set(text, cached);
+          } else {
+            throw new Error("Missing audio_data in Speechify response.");
+          }
+        } catch (error) {
+          console.warn("Speechify Netlify Function failed:", error.message);
+          if (btn) resetSentenceButton(index);
+          if (modalIcon) resetModalButton();
+          
+          showTtsError(`無法取得 Speechify 語音 (${error.message})，暫時切換為本地發音。`);
+          fallbackBrowserSpeak(text, index, isWord);
+          return;
+        }
+      }
+
+      const player = document.getElementById('speechifyAudioPlayer');
+      player.src = `data:audio/mp3;base64,${cached.audio_data}`;
+
+      if (!isWord && index !== -1) {
+        currentlyPlayingIndex = index;
+        const row = document.getElementById(`sentence-row-${index}`);
+        if (row) row.classList.add('sentence-playing');
+      }
+
+      player.onplay = () => {
+        if (!isWord && index !== -1 && cached.speech_marks) {
+          startWordSyncLoop(index, cached.speech_marks);
+        }
+      };
+
+      player.onended = () => {
+        if (!isWord && index !== -1) {
+          clearSentenceHighlight(index);
+          resetSentenceButton(index);
+          currentlyPlayingIndex = -1;
+        }
+        if (isWord) resetModalButton();
+      };
+
+      player.onerror = () => {
+        if (!isWord && index !== -1) {
+          clearSentenceHighlight(index);
+          resetSentenceButton(index);
+          currentlyPlayingIndex = -1;
+        }
+        if (isWord) resetModalButton();
+      };
+
+      try {
+        await player.play();
+        if (btn) btn.innerHTML = '<span>🔊</span>';
+        if (modalIcon) modalIcon.textContent = '🔊';
+      } catch (playErr) {
+        console.warn("Audio autoplay blocked by iOS Safari:", playErr);
+        if (btn) resetSentenceButton(index);
+        if (modalIcon) resetModalButton();
+      }
+    }
+
+    function fallbackBrowserSpeak(text, index = -1, isWord = false) {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = 'en-US';
+      utterance.rate = 0.85;
+
+      if (!isWord && index !== -1) {
+        currentlyPlayingIndex = index;
+        const row = document.getElementById(`sentence-row-${index}`);
+        if (row) row.classList.add('sentence-playing');
+
+        utterance.onboundary = function(event) {
+          if (event.charIndex === undefined) return;
+          clearWordHighlights(index); 
+          const spans = document.querySelectorAll(`#sentence-en-${index} .word-token`);
+          for (let span of spans) {
+            const start = parseInt(span.getAttribute('data-start'));
+            const end = parseInt(span.getAttribute('data-end'));
+            if (event.charIndex >= start && event.charIndex < end) {
+              span.classList.add('karaoke-highlight');
+              break; 
+            }
+          }
+        };
+
+        utterance.onend = () => {
+          clearSentenceHighlight(index);
+          currentlyPlayingIndex = -1;
+        };
+        utterance.onerror = () => {
+          clearSentenceHighlight(index);
+          currentlyPlayingIndex = -1;
+        };
+      }
+
+      window.speechSynthesis.speak(utterance);
+    }
+
+    function speakSentence(index) {
+      if (!window.chaptersData) return;
+      const currentContent = window.chaptersData[currentChapterIndex].content;
+      const text = currentContent[index].en;
+      playSpeechifyText(text, index, false);
+    }
+
+    function speakWord(word) {
+      if (!word) return;
+      playSpeechifyText(word, -1, true);
+    }
+
+    function toggleRowZh(btn) {
+      const p = btn.closest('.p-4, .p-5').querySelector('.zh-text');
+      p.classList.toggle('hidden');
+    }
+
+    function toggleAllTranslations() {
+      showAllZh = !showAllZh;
+      document.querySelectorAll('.zh-text').forEach(el => {
+        if (showAllZh) el.classList.remove('hidden');
+        else el.classList.add('hidden');
+      });
+    }
+
+    function showVocab(wordKey, index) {
+      const currentContent = window.chaptersData[currentChapterIndex].content;
+      const cleanWord = wordKey.toLowerCase();
+      const v = currentContent[index].vocab[cleanWord] || currentContent[index].vocab[wordKey];
+      if (!v) return;
+
+      currentWord = wordKey;
+      document.getElementById('vWord').textContent = wordKey;
+      document.getElementById('vPhonetic').textContent = v.phonetic || "";
+      document.getElementById('vMeaning').textContent = v.enMeaning || v.zh;
+      document.getElementById('vEmoji').textContent = v.emoji || "💡";
+      document.getElementById('vocabModal').classList.remove('hidden');
+      speakWord(wordKey);
+    }
+
+    function closeVocabModal() {
+      document.getElementById('vocabModal').classList.add('hidden');
+      stopAudioPlayback();
+    }
+
+    // --- Grammar Puzzle Module with Persistence ---
+    function initPuzzle() {
+      const currentContent = window.chaptersData[currentChapterIndex].content;
+      const chState = getChapterState(currentChapterIndex);
+      puzzleStep = chState.puzzleStep || 0;
+
+      if(!currentContent[puzzleStep] || !currentContent[puzzleStep].puzzle) {
+        document.getElementById('dropZone').innerHTML = '<span class="text-slate-400">No puzzle available for this sentence.</span>';
+        document.getElementById('wordsBank').innerHTML = '';
+        return;
+      }
+
+      const currentPuzzle = currentContent[puzzleStep].puzzle;
+      const bank = document.getElementById('wordsBank');
+      const dropZone = document.getElementById('dropZone');
+      const feedback = document.getElementById('feedbackText');
+
+      selectedBlocks = [];
+      feedback.textContent = "";
+      dropZone.innerHTML = '<span id="dropPlaceholder" class="text-sm text-indigo-400">Click words below to place them here...</span>';
+      bank.innerHTML = "";
+
+      const shuffled = [...currentPuzzle].sort(() => Math.random() - 0.5);
+
+      shuffled.forEach(text => {
+        const btn = document.createElement('button');
+        btn.textContent = text;
+        btn.className = "bg-indigo-100 border-2 border-indigo-200 hover:bg-indigo-200 text-indigo-900 font-bold px-5 py-3 rounded-xl text-lg shadow-sm transition-transform active:scale-95";
+        btn.onclick = () => pickBlock(btn, text);
+        bank.appendChild(btn);
+      });
+    }
+
+    function pickBlock(btn, text) {
+      const dropZone = document.getElementById('dropZone');
+      const placeholder = document.getElementById('dropPlaceholder');
+      if (placeholder) placeholder.remove();
+
+      selectedBlocks.push(text);
+      btn.disabled = true;
+      btn.classList.add('opacity-30', 'pointer-events-none');
+
+      const activeBlock = document.createElement('span');
+      activeBlock.textContent = text;
+      activeBlock.className = "bg-amber-400 text-amber-950 font-bold px-4 py-2 rounded-xl shadow-sm cursor-pointer hover:bg-amber-300 transition-colors";
+      
+      activeBlock.onclick = () => {
+        activeBlock.remove();
+        selectedBlocks = selectedBlocks.filter(b => b !== text);
+        btn.disabled = false;
+        btn.classList.remove('opacity-30', 'pointer-events-none');
+        if(selectedBlocks.length === 0) {
+            dropZone.innerHTML = '<span id="dropPlaceholder" class="text-sm text-indigo-400">Click words below to place them here...</span>';
+        }
+      };
+      dropZone.appendChild(activeBlock);
+    }
+
+    function checkSentence() {
+      const currentContent = window.chaptersData[currentChapterIndex].content;
+      if(!currentContent[puzzleStep] || !currentContent[puzzleStep].puzzle) return;
+
+      const currentPuzzle = currentContent[puzzleStep].puzzle;
+      const feedback = document.getElementById('feedbackText');
+
+      if (JSON.stringify(selectedBlocks) === JSON.stringify(currentPuzzle)) {
+        feedback.className = "text-base font-bold text-emerald-600";
+        feedback.textContent = "🎉 Excellent! Perfect order! (+10 Points)";
+        addScore(10); 
+
+        setTimeout(() => {
+          puzzleStep = (puzzleStep + 1) % currentContent.length;
+          // Persist step
+          getChapterState(currentChapterIndex).puzzleStep = puzzleStep;
+          saveToLocalStorage();
+          initPuzzle();
+        }, 1500);
+      } else {
+        feedback.className = "text-base font-bold text-rose-500";
+        feedback.textContent = "❌ Not quite right. Try again!";
+        setTimeout(() => initPuzzle(), 1500);
+      }
+    }
+    
+    // --- Chapter Quiz Module with Option A (Resume Directly) ---
+    function renderQuiz() {
+      const quizData = window.quizzesData[currentChapterIndex];
+      
+      if (!quizData || !quizData.questions || quizData.questions.length === 0) {
+          document.getElementById('quizContainer').innerHTML = '<div class="p-4 text-slate-500">No reading quiz available for this chapter yet.</div>';
+          document.getElementById('btnSubmitQuiz').classList.add('hidden');
+          document.getElementById('btnShowAnswer').classList.add('hidden');
+          document.getElementById('btnNextQuiz').classList.add('hidden');
+          return;
+      }
+
+      currentQuizQuestions = quizData.questions;
+      document.getElementById('totalQuizNumber').textContent = currentQuizQuestions.length;
+
+      const chState = getChapterState(currentChapterIndex);
+      
+      if (!quizRewarded[currentChapterIndex]) {
+          quizRewarded[currentChapterIndex] = 0; 
+      }
+
+      // Check if this chapter was already completed
+      if (chState.quiz.isCompleted) {
+        showQuizCompletedScreen();
+        return;
+      }
+
+      // Resume at saved currentIndex
+      currentQuizIndex = chState.quiz.currentIndex || 0;
+      if (currentQuizIndex >= currentQuizQuestions.length) {
+        currentQuizIndex = currentQuizQuestions.length - 1;
+      }
+
+      document.getElementById('quizContainer').innerHTML = `
+          <div class="mb-6">
+              <h4 id="quizQuestionText" class="text-xl font-semibold text-slate-800 leading-snug">Loading question...</h4>
+          </div>
+          <div id="quizOptionsContainer" class="space-y-3"></div>
+      `;
+      
+      loadQuizQuestion();
+    }
+
+    function showQuizCompletedScreen() {
+      document.getElementById('currentQuizNumber').textContent = currentQuizQuestions.length;
+      document.getElementById('quizContainer').innerHTML = `
+          <div class="text-center py-8">
+              <span class="text-6xl mb-4 block">🏆</span>
+              <h4 class="text-2xl font-bold text-slate-800">Reading Comprehension Completed!</h4>
+              <p class="text-slate-500 mt-2">You have finished all 12 questions for this chapter.</p>
+              <button onclick="resetAndRetryQuiz()" class="mt-6 bg-blue-500 hover:bg-blue-600 text-white font-bold px-8 py-3 rounded-2xl shadow-md transition-transform active:scale-95 text-base">
+                🔄 Reset & Retry Quiz
+              </button>
+          </div>
+      `;
+      document.getElementById('quizFeedbackContainer').classList.add('hidden');
+      document.getElementById('btnSubmitQuiz').classList.add('hidden');
+      document.getElementById('btnShowAnswer').classList.add('hidden');
+      document.getElementById('btnNextQuiz').classList.add('hidden');
+    }
+
+    function resetAndRetryQuiz() {
+      const chState = getChapterState(currentChapterIndex);
+      chState.quiz.currentIndex = 0;
+      chState.quiz.isCompleted = false;
+      saveToLocalStorage();
+      renderQuiz();
+    }
+
+    function loadQuizQuestion() {
+        const question = currentQuizQuestions[currentQuizIndex];
+        document.getElementById('currentQuizNumber').textContent = currentQuizIndex + 1;
+        document.getElementById('quizQuestionText').textContent = question.question;
+        
+        const optionsContainer = document.getElementById('quizOptionsContainer');
+        optionsContainer.innerHTML = '';
+        selectedQuizOption = null;
+
+        question.answerOptions.forEach((option, index) => {
+            const btn = document.createElement('button');
+            btn.className = "quiz-option w-full text-left p-4 rounded-xl border-2 border-slate-200 text-slate-700 bg-white hover:bg-slate-50 font-medium text-lg";
+            btn.textContent = option.text;
+            btn.onclick = () => selectQuizOption(btn, index);
+            optionsContainer.appendChild(btn);
+        });
+
+        document.getElementById('quizFeedbackContainer').classList.add('hidden');
+        document.getElementById('btnSubmitQuiz').classList.remove('hidden');
+        document.getElementById('btnShowAnswer').classList.remove('hidden');
+        document.getElementById('btnNextQuiz').classList.add('hidden');
+        
+        document.getElementById('btnSubmitQuiz').disabled = true;
+        document.getElementById('btnSubmitQuiz').classList.add('opacity-50', 'cursor-not-allowed');
+    }
+
+    function selectQuizOption(selectedBtn, index) {
+        const optionsContainer = document.getElementById('quizOptionsContainer');
+        Array.from(optionsContainer.children).forEach(btn => {
+            btn.classList.remove('selected', 'border-blue-500', 'bg-blue-50');
+        });
+
+        selectedBtn.classList.add('selected', 'border-blue-500', 'bg-blue-50');
+        selectedQuizOption = index;
+
+        const submitBtn = document.getElementById('btnSubmitQuiz');
+        submitBtn.disabled = false;
+        submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+    }
+
+    function submitQuizAnswer() {
+        if (selectedQuizOption === null) return;
+
+        const question = currentQuizQuestions[currentQuizIndex];
+        const selectedObj = question.answerOptions[selectedQuizOption];
+        const isCorrect = selectedObj.isCorrect;
+
+        displayQuizFeedback(isCorrect, selectedObj.rationale);
+        lockQuizOptions();
+
+        if (isCorrect) {
+            const maxScoreForChapter = currentQuizQuestions.length * 5;
+            if (quizRewarded[currentChapterIndex] < maxScoreForChapter) {
+                addScore(5); 
+                quizRewarded[currentChapterIndex] += 5;
+            }
+        }
+    }
+    
+    function showQuizAnswer() {
+        const question = currentQuizQuestions[currentQuizIndex];
+        let correctIndex = 0;
+        question.answerOptions.forEach((opt, idx) => {
+            if (opt.isCorrect) correctIndex = idx;
+        });
+        
+        const rationale = question.answerOptions[correctIndex].rationale;
+        displayQuizFeedback(false, "Correct Answer Revealed: " + rationale, correctIndex);
+        lockQuizOptions();
+    }
+
+    function displayQuizFeedback(isCorrect, rationaleText, forceHighlightCorrectIndex = -1) {
+        const feedbackContainer = document.getElementById('quizFeedbackContainer');
+        const resultText = document.getElementById('quizFeedbackResult');
+        const rationale = document.getElementById('quizRationaleText');
+        
+        feedbackContainer.classList.remove('hidden', 'bg-emerald-50', 'bg-rose-50', 'bg-slate-50');
+        
+        if (isCorrect) {
+            feedbackContainer.classList.add('bg-emerald-50');
+            resultText.textContent = "🎉 Correct! (+5 Points)";
+            resultText.className = "font-bold text-lg mb-1 text-emerald-700";
+        } else if (forceHighlightCorrectIndex !== -1) {
+            feedbackContainer.classList.add('bg-slate-50');
+            resultText.textContent = "👀 Here is the answer:";
+            resultText.className = "font-bold text-lg mb-1 text-slate-700";
+        } else {
+            feedbackContainer.classList.add('bg-rose-50');
+            resultText.textContent = "❌ Not quite right.";
+            resultText.className = "font-bold text-lg mb-1 text-rose-700";
+        }
+        
+        rationale.textContent = rationaleText;
+
+        const optionsContainer = document.getElementById('quizOptionsContainer');
+        const question = currentQuizQuestions[currentQuizIndex];
+        
+        Array.from(optionsContainer.children).forEach((btn, index) => {
+            if (question.answerOptions[index].isCorrect) {
+                btn.classList.add('correct', 'border-emerald-500', 'bg-emerald-50');
+                btn.classList.remove('selected', 'border-blue-500', 'bg-blue-50');
+            } else if (index === selectedQuizOption && !isCorrect && forceHighlightCorrectIndex === -1) {
+                btn.classList.add('incorrect', 'border-rose-500', 'bg-rose-50');
+                btn.classList.remove('selected', 'border-blue-500', 'bg-blue-50');
+            }
+        });
+
+        document.getElementById('btnSubmitQuiz').classList.add('hidden');
+        document.getElementById('btnShowAnswer').classList.add('hidden');
+        
+        const nextBtn = document.getElementById('btnNextQuiz');
+        nextBtn.classList.remove('hidden');
+        
+        if (currentQuizIndex === currentQuizQuestions.length - 1) {
+            nextBtn.textContent = "Finish Quiz 🏆";
+        } else {
+            nextBtn.textContent = "Next Question ➡️";
+        }
+    }
+
+    function lockQuizOptions() {
+        const optionsContainer = document.getElementById('quizOptionsContainer');
+        Array.from(optionsContainer.children).forEach(btn => {
+            btn.disabled = true;
+            btn.classList.add('cursor-not-allowed', 'opacity-80');
+        });
+    }
+
+    function nextQuizQuestion() {
+        const chState = getChapterState(currentChapterIndex);
+
+        if (currentQuizIndex < currentQuizQuestions.length - 1) {
+            currentQuizIndex++;
+            chState.quiz.currentIndex = currentQuizIndex;
+            saveToLocalStorage();
+            loadQuizQuestion();
+        } else {
+            chState.quiz.isCompleted = true;
+            saveToLocalStorage();
+            showQuizCompletedScreen();
+        }
+    }
+
+    // --- Fill in the Blank Module with Fixed Questions & Option A ---
+    function renderFitb() {
+      const chState = getChapterState(currentChapterIndex);
+
+      if (!fitbRewarded[currentChapterIndex]) {
+          fitbRewarded[currentChapterIndex] = 0; 
+      }
+
+      // If already completed, show completed screen
+      if (chState.fitb.isCompleted) {
+        showFitbCompletedScreen();
+        return;
+      }
+
+      // If this chapter doesn't have generated questions yet, generate and save them
+      if (!chState.fitb.questions || chState.fitb.questions.length === 0) {
+        generateFitbQuestionsForChapter(currentChapterIndex);
+      }
+
+      currentFitbQuestions = chState.fitb.questions || [];
+      document.getElementById('totalFitbNumber').textContent = currentFitbQuestions.length;
+
+      if (currentFitbQuestions.length === 0) {
+          document.getElementById('fitbContainer').innerHTML = '<div class="p-4 text-slate-500">No vocabulary quiz available for this chapter yet.</div>';
+          document.getElementById('btnSubmitFitb').classList.add('hidden');
+          document.getElementById('btnShowFitbAnswer').classList.add('hidden');
+          document.getElementById('btnNextFitb').classList.add('hidden');
+          return;
+      }
+
+      currentFitbIndex = chState.fitb.currentIndex || 0;
+      if (currentFitbIndex >= currentFitbQuestions.length) {
+        currentFitbIndex = currentFitbQuestions.length - 1;
+      }
+
+      document.getElementById('fitbContainer').innerHTML = `
+          <div class="mb-6">
+              <h4 id="fitbQuestionText" class="text-xl font-semibold text-slate-800 leading-snug">Loading question...</h4>
+          </div>
+          <div id="fitbOptionsContainer" class="space-y-3"></div>
+      `;
+      
+      loadFitbQuestion();
+    }
+
+    function generateFitbQuestionsForChapter(chIdx) {
+      const content = window.chaptersData[chIdx].content;
+      let candidateWords = [];
+      let vocabToSentenceMap = {};
+      
+      content.forEach(item => {
+          if (item.vocab) {
+              for (let key in item.vocab) {
+                  const cleanKey = key.toLowerCase();
+                  const regex = new RegExp(`\\b${cleanKey}\\b`, 'i');
+                  const match = item.en.match(regex);
+                  if (match) {
+                      let w = match[0];
+                      if (!candidateWords.includes(w)) {
+                          candidateWords.push(w);
+                          vocabToSentenceMap[w] = item.en;
+                      }
+                  }
+              }
+          }
+      });
+
+      if (candidateWords.length < 12) {
+          content.forEach(item => {
+              let words = item.en.match(/\b[a-zA-Z]{5,}\b/g) || [];
+              words.forEach(w => {
+                  let lowerW = w.toLowerCase();
+                  if (!candidateWords.some(cw => cw.toLowerCase() === lowerW)) {
+                      candidateWords.push(w);
+                      vocabToSentenceMap[w] = item.en;
+                  }
+              });
+          });
+      }
+
+      candidateWords = candidateWords.sort(() => 0.5 - Math.random()).slice(0, 12);
+      
+      const generated = candidateWords.map(word => {
+          const sentence = vocabToSentenceMap[word];
+          const blankedSentence = sentence.replace(new RegExp(`\\b${word}\\b`, 'i'), '________');
+          
+          let allOtherWords = Object.keys(vocabToSentenceMap).filter(w => w.toLowerCase() !== word.toLowerCase());
+          let distractors = allOtherWords.sort(() => 0.5 - Math.random()).slice(0, 3);
+          
+          const fallbacks = ["magic", "dragon", "jumped", "quickly", "forest", "looked", "happy", "water", "found", "small", "barn", "creature", "animal", "friend", "surprised", "scared"];
+          while(distractors.length < 3) {
+              let fb = fallbacks[Math.floor(Math.random() * fallbacks.length)];
+              if(!distractors.includes(fb) && fb.toLowerCase() !== word.toLowerCase()) {
+                  distractors.push(fb);
+              }
+          }
+
+          let options = [...distractors, word].sort(() => 0.5 - Math.random());
+          
+          return {
+              question: blankedSentence,
+              answerOptions: options.map(opt => ({
+                  text: opt,
+                  isCorrect: opt === word,
+                  rationale: `The correct word is "${word}".`
+              }))
+          };
+      });
+
+      const chState = getChapterState(chIdx);
+      chState.fitb.questions = generated;
+      chState.fitb.currentIndex = 0;
+      chState.fitb.isCompleted = false;
+      saveToLocalStorage();
+    }
+
+    function showFitbCompletedScreen() {
+      document.getElementById('currentFitbNumber').textContent = (currentFitbQuestions && currentFitbQuestions.length) || 12;
+      document.getElementById('fitbContainer').innerHTML = `
+          <div class="text-center py-8">
+              <span class="text-6xl mb-4 block">🎓</span>
+              <h4 class="text-2xl font-bold text-slate-800">Vocabulary Quiz Completed!</h4>
+              <p class="text-slate-500 mt-2">You mastered all 12 vocabulary fill-in-the-blank questions.</p>
+              <button onclick="resetAndRetryFitb()" class="mt-6 bg-fuchsia-500 hover:bg-fuchsia-600 text-white font-bold px-8 py-3 rounded-2xl shadow-md transition-transform active:scale-95 text-base">
+                🔄 Reset & Retry Vocab
+              </button>
+          </div>
+      `;
+      document.getElementById('fitbFeedbackContainer').classList.add('hidden');
+      document.getElementById('btnSubmitFitb').classList.add('hidden');
+      document.getElementById('btnShowFitbAnswer').classList.add('hidden');
+      document.getElementById('btnNextFitb').classList.add('hidden');
+    }
+
+    function resetAndRetryFitb() {
+      const chState = getChapterState(currentChapterIndex);
+      chState.fitb.currentIndex = 0;
+      chState.fitb.isCompleted = false;
+      saveToLocalStorage();
+      renderFitb();
+    }
+
+    function loadFitbQuestion() {
+        const question = currentFitbQuestions[currentFitbIndex];
+        document.getElementById('currentFitbNumber').textContent = currentFitbIndex + 1;
+        document.getElementById('fitbQuestionText').textContent = question.question;
+        
+        const optionsContainer = document.getElementById('fitbOptionsContainer');
+        optionsContainer.innerHTML = '';
+        selectedFitbOption = null;
+
+        question.answerOptions.forEach((option, index) => {
+            const btn = document.createElement('button');
+            btn.className = "quiz-option w-full text-left p-4 rounded-xl border-2 border-slate-200 text-slate-700 bg-white hover:bg-slate-50 font-medium text-lg";
+            btn.textContent = option.text;
+            btn.onclick = () => selectFitbOption(btn, index);
+            optionsContainer.appendChild(btn);
+        });
+
+        document.getElementById('fitbFeedbackContainer').classList.add('hidden');
+        document.getElementById('btnSubmitFitb').classList.remove('hidden');
+        document.getElementById('btnShowFitbAnswer').classList.remove('hidden');
+        document.getElementById('btnNextFitb').classList.add('hidden');
+        
+        document.getElementById('btnSubmitFitb').disabled = true;
+        document.getElementById('btnSubmitFitb').classList.add('opacity-50', 'cursor-not-allowed');
+    }
+
+    function selectFitbOption(selectedBtn, index) {
+        const optionsContainer = document.getElementById('fitbOptionsContainer');
+        Array.from(optionsContainer.children).forEach(btn => {
+            btn.classList.remove('selected', 'border-fuchsia-500', 'bg-fuchsia-50');
+        });
+
+        selectedBtn.classList.add('selected', 'border-fuchsia-500', 'bg-fuchsia-50');
+        selectedFitbOption = index;
+
+        const submitBtn = document.getElementById('btnSubmitFitb');
+        submitBtn.disabled = false;
+        submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+    }
+
+    function submitFitbAnswer() {
+        if (selectedFitbOption === null) return;
+
+        const question = currentFitbQuestions[currentFitbIndex];
+        const selectedObj = question.answerOptions[selectedFitbOption];
+        const isCorrect = selectedObj.isCorrect;
+
+        displayFitbFeedback(isCorrect, selectedObj.rationale);
+        lockFitbOptions();
+
+        if (isCorrect) {
+            const maxScoreForChapter = currentFitbQuestions.length * 5;
+            if (fitbRewarded[currentChapterIndex] < maxScoreForChapter) {
+                addScore(5); 
+                fitbRewarded[currentChapterIndex] += 5;
+            }
+        }
+    }
+    
+    function showFitbAnswer() {
+        const question = currentFitbQuestions[currentFitbIndex];
+        let correctIndex = 0;
+        question.answerOptions.forEach((opt, idx) => {
+            if (opt.isCorrect) correctIndex = idx;
+        });
+        
+        const rationale = question.answerOptions[correctIndex].rationale;
+        displayFitbFeedback(false, "Correct Answer Revealed: " + rationale, correctIndex);
+        lockFitbOptions();
+    }
+
+    function displayFitbFeedback(isCorrect, rationaleText, forceHighlightCorrectIndex = -1) {
+        const feedbackContainer = document.getElementById('fitbFeedbackContainer');
+        const resultText = document.getElementById('fitbFeedbackResult');
+        const rationale = document.getElementById('fitbRationaleText');
+        
+        feedbackContainer.classList.remove('hidden', 'bg-emerald-50', 'bg-rose-50', 'bg-slate-50');
+        
+        if (isCorrect) {
+            feedbackContainer.classList.add('bg-emerald-50');
+            resultText.textContent = "🎉 Correct! (+5 Points)";
+            resultText.className = "font-bold text-lg mb-1 text-emerald-700";
+        } else if (forceHighlightCorrectIndex !== -1) {
+            feedbackContainer.classList.add('bg-slate-50');
+            resultText.textContent = "👀 Here is the answer:";
+            resultText.className = "font-bold text-lg mb-1 text-slate-700";
+        } else {
+            feedbackContainer.classList.add('bg-rose-50');
+            resultText.textContent = "❌ Not quite right.";
+            resultText.className = "font-bold text-lg mb-1 text-rose-700";
+        }
+        
+        rationale.textContent = rationaleText;
+
+        const optionsContainer = document.getElementById('fitbOptionsContainer');
+        const question = currentFitbQuestions[currentFitbIndex];
+        
+        Array.from(optionsContainer.children).forEach((btn, index) => {
+            if (question.answerOptions[index].isCorrect) {
+                btn.classList.add('correct', 'border-emerald-500', 'bg-emerald-50');
+                btn.classList.remove('selected', 'border-fuchsia-500', 'bg-fuchsia-50');
+            } else if (index === selectedFitbOption && !isCorrect && forceHighlightCorrectIndex === -1) {
+                btn.classList.add('incorrect', 'border-rose-500', 'bg-rose-50');
+                btn.classList.remove('selected', 'border-fuchsia-500', 'bg-fuchsia-50');
+            }
+        });
+
+        document.getElementById('btnSubmitFitb').classList.add('hidden');
+        document.getElementById('btnShowFitbAnswer').classList.add('hidden');
+        
+        const nextBtn = document.getElementById('btnNextFitb');
+        nextBtn.classList.remove('hidden');
+        
+        if (currentFitbIndex === currentFitbQuestions.length - 1) {
+            nextBtn.textContent = "Finish Vocab Quiz 🏆";
+        } else {
+            nextBtn.textContent = "Next Question ➡️";
+        }
+    }
+
+    function lockFitbOptions() {
+        const optionsContainer = document.getElementById('fitbOptionsContainer');
+        Array.from(optionsContainer.children).forEach(btn => {
+            btn.disabled = true;
+            btn.classList.add('cursor-not-allowed', 'opacity-80');
+        });
+    }
+
+    function nextFitbQuestion() {
+        const chState = getChapterState(currentChapterIndex);
+
+        if (currentFitbIndex < currentFitbQuestions.length - 1) {
+            currentFitbIndex++;
+            chState.fitb.currentIndex = currentFitbIndex;
+            saveToLocalStorage();
+            loadFitbQuestion();
+        } else {
+            chState.fitb.isCompleted = true;
+            saveToLocalStorage();
+            showFitbCompletedScreen();
+        }
+    }
+
+    // --- Tab Switching with State Preservation ---
+    function switchTab(tab) {
+      stopAudioPlayback();
+
+      document.getElementById('readerView').classList.add('hidden');
+      document.getElementById('gameView').classList.add('hidden');
+      document.getElementById('quizView').classList.add('hidden');
+      document.getElementById('fitbView').classList.add('hidden');
+
+      const inactiveClass = "flex-1 py-3 px-4 rounded-2xl font-bold bg-white text-amber-700 border-2 border-amber-200 transition-transform active:scale-95 whitespace-nowrap";
+      document.getElementById('tabReader').className = inactiveClass;
+      document.getElementById('tabGame').className = inactiveClass;
+      document.getElementById('tabQuiz').className = inactiveClass;
+      document.getElementById('tabFitb').className = inactiveClass;
+
+      if (tab === 'reader') {
+        document.getElementById('readerView').classList.remove('hidden');
+        document.getElementById('tabReader').className = "flex-1 py-3 px-4 rounded-2xl font-bold bg-amber-500 text-white shadow-md transition-transform active:scale-95 whitespace-nowrap";
+      } else if (tab === 'game') {
+        document.getElementById('gameView').classList.remove('hidden');
+        document.getElementById('tabGame').className = "flex-1 py-3 px-4 rounded-2xl font-bold bg-indigo-500 text-white shadow-md transition-transform active:scale-95 whitespace-nowrap";
+        initPuzzle();
+      } else if (tab === 'quiz') {
+        document.getElementById('quizView').classList.remove('hidden');
+        document.getElementById('tabQuiz').className = "flex-1 py-3 px-4 rounded-2xl font-bold bg-blue-500 text-white shadow-md transition-transform active:scale-95 whitespace-nowrap";
+        renderQuiz(); // Resumes saved progress directly
+      } else if (tab === 'fitb') {
+        document.getElementById('fitbView').classList.remove('hidden');
+        document.getElementById('tabFitb').className = "flex-1 py-3 px-4 rounded-2xl font-bold bg-fuchsia-500 text-white shadow-md transition-transform active:scale-95 whitespace-nowrap";
+        renderFitb(); // Resumes saved progress directly with fixed questions
+      }
+    }
+
+    window.addEventListener('load', () => {
+      loadFromLocalStorage();
+      renderChapterList();
+      loadChapter(0);
+    }); 
+  </script>
+</body>
+</html>

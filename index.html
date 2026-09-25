@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Zoey & Sassafras Reading Assistant</title>
+  <title>Zoey & Sassafras Reading Assistant - Multi-Book Edition</title>
   <script src="https://cdn.tailwindcss.com"></script>
   
   <style>
@@ -36,6 +36,19 @@
       transition: all 0.08s ease-in-out;
     }
 
+    /* Justified text styling for story content */
+    .story-text-en {
+      text-align: justify;
+      text-justify: inter-word;
+      word-break: normal;
+      hyphens: auto;
+    }
+
+    .story-text-zh {
+      text-align: justify;
+      text-justify: inter-ideograph;
+    }
+
     /* Custom Scrollbar */
     ::-webkit-scrollbar { width: 8px; height: 8px; }
     ::-webkit-scrollbar-track { background: transparent; }
@@ -50,59 +63,43 @@
     .quiz-option:disabled { cursor: not-allowed; }
   </style>
 
+  <!-- Global pre-loaders initialized dynamically per active book -->
   <script>
     window.chaptersData = [];
     window.quizzesData = {}; 
   </script>
-
-  <!-- External Chapter context data files -->
-  <script src="book/1/context/chapter1.js"></script>
-  <script src="book/1/context/chapter2.js"></script>
-  <script src="book/1/context/chapter3.js"></script>
-  <script src="book/1/context/chapter4.js"></script>
-  <script src="book/1/context/chapter5.js"></script>
-  <script src="book/1/context/chapter6.js"></script>
-  <script src="book/1/context/chapter7.js"></script>
-  <script src="book/1/context/chapter8.js"></script>
-  <script src="book/1/context/chapter9.js"></script>
-  <script src="book/1/context/chapter10.js"></script>
-  <script src="book/1/context/chapter11.js"></script>
-  <script src="book/1/context/chapter12.js"></script>
-  <script src="book/1/context/chapter13.js"></script>
-  <script src="book/1/context/chapter14.js"></script>
-  <script src="book/1/context/chapter15.js"></script>
-  <script src="book/1/context/chapter16.js"></script>
-
-  <!-- External Chapter quiz data files -->
-  <script src="book/1/quiz/quiz1.js"></script>
-  <script src="book/1/quiz/quiz2.js"></script>
-  <script src="book/1/quiz/quiz3.js"></script>
-  <script src="book/1/quiz/quiz4.js"></script>
-  <script src="book/1/quiz/quiz5.js"></script>
-  <script src="book/1/quiz/quiz6.js"></script>
-  <script src="book/1/quiz/quiz7.js"></script>
-  <script src="book/1/quiz/quiz8.js"></script>
-  <script src="book/1/quiz/quiz9.js"></script>
-  <script src="book/1/quiz/quiz10.js"></script>
-  <script src="book/1/quiz/quiz11.js"></script>
-  <script src="book/1/quiz/quiz12.js"></script>
-  <script src="book/1/quiz/quiz13.js"></script>
-  <script src="book/1/quiz/quiz14.js"></script>
-  <script src="book/1/quiz/quiz15.js"></script>
-  <script src="book/1/quiz/quiz16.js"></script>
 </head>
 
 <body class="text-slate-800 min-h-screen p-4 md:p-6 flex flex-col">
+  <!-- Top Navigation Bar -->
   <div class="max-w-6xl w-full mx-auto flex flex-col md:flex-row justify-between items-center bg-white p-4 rounded-2xl shadow-sm border-2 border-amber-200 mb-6 gap-4 flex-shrink-0">
     <div class="flex items-center space-x-3">
-      <span class="text-3xl">🐉</span>
+      <span class="text-3xl" id="headerBookEmoji">🐉</span>
       <div>
-        <h1 class="text-xl font-bold text-amber-900">Zoey & Sassafras Assistant</h1>
-        <p class="text-xs text-amber-700">Magical Animal Rescue Diary • Voice: Victoria (Synced Highlighting)</p>
+        <h1 class="text-xl font-bold text-amber-900 flex items-center gap-2">
+          <span>Zoey & Sassafras Assistant</span>
+          <span id="badgeCurrentBookTag" class="text-xs bg-amber-100 text-amber-800 font-bold px-2 py-0.5 rounded-md">Book 1</span>
+        </h1>
+        <p class="text-xs text-amber-700">Magical Animal Rescue Diary • Voice: Victoria (Speechify AI)</p>
       </div>
     </div>
     
     <div class="flex items-center space-x-3 flex-wrap justify-end">
+      <!-- Server-Side Book Selector Dropdown -->
+      <div class="flex items-center bg-amber-50 border-2 border-amber-300 rounded-xl px-2 py-1 shadow-sm">
+        <label for="selectBook" class="text-xs font-bold text-amber-900 mr-2 select-none flex items-center gap-1">
+          <span>📚</span> <span>Book:</span>
+        </label>
+        <select id="selectBook" onchange="switchBook(this.value)" class="bg-white text-amber-950 font-bold text-sm rounded-lg px-2 py-1 border border-amber-200 outline-none focus:ring-2 focus:ring-amber-400 cursor-pointer max-w-[210px] truncate">
+          <!-- Loaded dynamically from book/books.json -->
+        </select>
+      </div>
+
+      <!-- How to Add Books Info Button -->
+      <button onclick="openHowToAddModal()" class="bg-amber-100 hover:bg-amber-200 text-amber-900 text-xs font-bold px-3 py-2 rounded-xl shadow-xs transition-transform active:scale-95 flex items-center gap-1" title="How to add new books on server">
+        <span>ℹ️</span> <span>Add Books</span>
+      </button>
+
       <!-- Auto-save Status Indicator -->
       <div id="saveStatusContainer" class="flex items-center bg-emerald-50 px-3 py-2 rounded-xl border border-emerald-200 transition-colors">
         <span id="saveStatus" class="text-xs font-bold text-emerald-600">💾 Progress Saved</span>
@@ -117,9 +114,13 @@
     </div>
   </div>
 
+  <!-- Main Content Layout -->
   <div class="max-w-6xl w-full mx-auto flex flex-col md:flex-row gap-6 flex-1 min-h-0">
     <!-- Left Sidebar: Chapter List -->
     <div class="w-full md:w-64 shrink-0 flex flex-col gap-2 bg-white p-4 rounded-3xl shadow-sm border-2 border-amber-100 overflow-y-auto" id="chapterList">
+      <div class="p-4 text-sm text-amber-700 animate-pulse font-bold flex items-center gap-2">
+        <span>⏳</span> <span>Loading book data...</span>
+      </div>
     </div>
 
     <!-- Right Content Area -->
@@ -151,10 +152,16 @@
                   <span id="fontSizeDisplay" class="text-xs font-bold text-amber-800 px-2 select-none min-w-[42px] text-center">20px</span>
                   <button onclick="adjustFontSize(2)" class="w-8 h-8 flex items-center justify-center rounded-lg bg-white border border-amber-200 text-amber-900 font-bold hover:bg-amber-100 active:scale-90 transition-all text-base shadow-xs" title="Increase Font Size" aria-label="Increase Font Size">＋</button>
                 </div>
-                <button onclick="toggleAllTranslations()" class="text-sm bg-amber-100 hover:bg-amber-200 text-amber-800 font-bold px-4 py-2 rounded-xl transition-colors">
-                  Toggle Translations
+                <button onclick="toggleAllTranslations()" id="btnToggleAllZh" class="text-sm bg-amber-100 hover:bg-amber-200 text-amber-800 font-bold px-4 py-2 rounded-xl transition-colors">
+                  Show Translations
                 </button>
               </div>
+            </div>
+            <!-- Dynamic Server Loading Indicator Banner -->
+            <div id="bookLoadingBanner" class="hidden p-8 text-center bg-amber-50 rounded-2xl border-2 border-dashed border-amber-300 mb-4">
+              <div class="inline-block w-8 h-8 border-4 border-amber-500 border-t-transparent rounded-full animate-spin mb-3"></div>
+              <p class="font-bold text-amber-900 text-base">Loading book scripts from server...</p>
+              <p class="text-xs text-amber-700 mt-1">Fetching context and quiz files from server directory</p>
             </div>
             <div id="sentencesContainer" class="space-y-3"></div>
           </div>
@@ -269,6 +276,52 @@
     </div>
   </div>
 
+  <!-- Server-Side Book Management Instruction Modal -->
+  <div id="howToAddModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center hidden p-4 z-50 overflow-y-auto">
+    <div class="bg-white max-w-xl w-full p-6 md:p-8 rounded-3xl shadow-2xl border-2 border-amber-200 relative my-8">
+      <div class="flex justify-between items-center border-b border-slate-100 pb-3 mb-4">
+        <div class="flex items-center gap-2">
+          <span class="text-2xl">📚</span>
+          <h3 class="text-xl font-bold text-slate-800">Server-Side Book Structure</h3>
+        </div>
+        <button onclick="closeHowToAddModal()" class="text-slate-400 hover:text-slate-600 text-2xl font-bold px-2">&times;</button>
+      </div>
+      
+      <p class="text-xs text-slate-600 mb-3 leading-relaxed">
+        This app dynamically loads books directly from your project folders on the server. To add <strong>Book 2</strong>, <strong>Book 3</strong>, or more, follow these 3 simple steps:
+      </p>
+
+      <div class="space-y-3 text-xs bg-slate-50 p-4 rounded-2xl border border-slate-200 font-mono">
+        <div>
+          <strong class="text-indigo-600 font-sans block mb-1">Step 1: Create folders on server</strong>
+          <code>book/2/context/chapter1.js ... chapter16.js</code><br>
+          <code>book/2/quiz/quiz1.js ... quiz16.js</code>
+        </div>
+        <div>
+          <strong class="text-indigo-600 font-sans block mb-1">Step 2: Register in book/books.json</strong>
+          <pre class="bg-white p-2 rounded-xl border border-slate-200 overflow-x-auto text-[11px]">{
+  "id": "2",
+  "title": "Monsters and Mold",
+  "series": "Book 2",
+  "emoji": "🍄",
+  "totalChapters": 16
+}</pre>
+        </div>
+        <div>
+          <strong class="text-indigo-600 font-sans block mb-1">Step 3: Deploy to Netlify</strong>
+          <span class="font-sans text-slate-500">Push to Git or upload to Netlify. The new book will automatically appear in the Book dropdown!</span>
+        </div>
+      </div>
+
+      <div class="flex justify-end pt-5">
+        <button onclick="closeHowToAddModal()" class="bg-amber-500 hover:bg-amber-600 text-white font-bold px-6 py-2.5 rounded-xl shadow-sm text-sm">
+          Got it!
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Vocabulary Modal -->
   <div id="vocabModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center hidden p-4 z-50">
     <div class="bg-white max-w-sm w-full p-8 rounded-3xl shadow-2xl border-2 border-amber-300 text-center relative overflow-hidden">
       <div class="absolute top-0 left-0 w-full h-2 bg-amber-400"></div>
@@ -288,10 +341,9 @@
     </div>
   </div>
 
-  <!-- Dedicated iPad Safari audio player -->
+  <!-- Audio Player & Diagnostic Banner -->
   <audio id="speechifyAudioPlayer" playsinline preload="auto" class="hidden"></audio>
 
-  <!-- Diagnostic Toast Banner for iPad / Netlify Errors -->
   <div id="ttsErrorBanner" class="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 max-w-md bg-rose-600 text-white p-4 rounded-2xl shadow-xl z-50 text-sm hidden transition-all">
     <div class="flex items-start justify-between gap-2">
       <div>
@@ -303,8 +355,30 @@
   </div>
 
   <script>
+    // Server-Side Books Registry
+    let serverBooks = [
+      {
+        id: "1",
+        title: "Dragons and Marshmallows",
+        series: "Book 1",
+        emoji: "🐉",
+        totalChapters: 16
+      },
+      {
+        id: "2",
+        title: "Monsters and Mold",
+        series: "Book 2",
+        emoji: "🍄",
+        totalChapters: 16
+      }
+    ];
+
+    let currentBookId = "1";
     let currentChapterIndex = 0; 
-    let showAllZh = true;
+    
+    // By default, toggle translations is OFF
+    let showAllZh = false;
+    
     let score = 0;
     let currentWord = "";
     
@@ -319,14 +393,16 @@
     let currentQuizIndex = 0;
     let currentQuizQuestions = [];
     let selectedQuizOption = null;
-    let quizRewarded = {}; 
 
     let currentFitbIndex = 0;
     let currentFitbQuestions = [];
     let selectedFitbOption = null;
+    
+    // Reward points trackers keyed by bookId: { "1": { "0": 60 } }
+    let quizRewarded = {}; 
     let fitbRewarded = {}; 
     
-    // Per-chapter persistence state table
+    // Per-book & chapter persistence state: { [bookId]: { [chIdx]: { ... } } }
     let chaptersState = {};
 
     let currentlyPlayingIndex = -1;
@@ -349,10 +425,26 @@
       if (banner) banner.classList.add('hidden');
     }
 
-    // Helper to get or initialize persistent state for a chapter
-    function getChapterState(chIdx) {
-      if (!chaptersState[chIdx]) {
-        chaptersState[chIdx] = {
+    function openHowToAddModal() {
+      document.getElementById('howToAddModal').classList.remove('hidden');
+    }
+
+    function closeHowToAddModal() {
+      document.getElementById('howToAddModal').classList.add('hidden');
+    }
+
+    // Helper: Access currently active book configuration
+    function getCurrentBookConfig() {
+      return serverBooks.find(b => String(b.id) === String(currentBookId)) || serverBooks[0];
+    }
+
+    // Helper: Get or initialize persistent state for a book & chapter
+    function getChapterState(bId, chIdx) {
+      if (!chaptersState[bId]) {
+        chaptersState[bId] = {};
+      }
+      if (!chaptersState[bId][chIdx]) {
+        chaptersState[bId][chIdx] = {
           puzzleStep: 0,
           quiz: {
             currentIndex: 0,
@@ -365,15 +457,18 @@
           }
         };
       }
-      return chaptersState[chIdx];
+      return chaptersState[bId][chIdx];
     }
 
+    // Load state from localStorage
     function loadFromLocalStorage() {
       try {
-        const savedData = localStorage.getItem('zoeySassafrasProgress_v8');
+        const savedData = localStorage.getItem('zoeySassafrasServerBooks_v1');
         if (savedData) {
           const parsedData = JSON.parse(savedData);
           score = parsedData.score || 0;
+          currentBookId = parsedData.currentBookId || "1";
+          currentChapterIndex = parsedData.currentChapterIndex || 0;
           quizRewarded = parsedData.quizRewarded || {};
           fitbRewarded = parsedData.fitbRewarded || {};
           chaptersState = parsedData.chaptersState || {};
@@ -388,18 +483,22 @@
         updateSaveStatus(false, true);
       }
       updateFontSizeUI();
+      updateToggleTranslationsButtonUI();
     }
 
+    // Save state to localStorage
     function saveToLocalStorage() {
       try {
         const saveData = {
           score: score,
+          currentBookId: currentBookId,
+          currentChapterIndex: currentChapterIndex,
           quizRewarded: quizRewarded,
           fitbRewarded: fitbRewarded,
           chaptersState: chaptersState,
           fontSize: currentFontSize
         };
-        localStorage.setItem('zoeySassafrasProgress_v8', JSON.stringify(saveData));
+        localStorage.setItem('zoeySassafrasServerBooks_v1', JSON.stringify(saveData));
         
         const statusBox = document.getElementById('saveStatusContainer');
         statusBox.classList.add('bg-emerald-100', 'border-emerald-300');
@@ -410,38 +509,6 @@
         console.error("Auto-save to localStorage failed", error);
         updateSaveStatus(false, true);
       }
-    }
-
-    // --- Font Size Adjustment Controls ---
-    function adjustFontSize(delta) {
-      const newSize = currentFontSize + delta;
-      if (newSize >= MIN_FONT_SIZE && newSize <= MAX_FONT_SIZE) {
-        currentFontSize = newSize;
-        applyFontSize();
-        updateFontSizeUI();
-        saveToLocalStorage();
-      }
-    }
-
-    function updateFontSizeUI() {
-      const display = document.getElementById('fontSizeDisplay');
-      if (display) {
-        display.textContent = `${currentFontSize}px`;
-      }
-    }
-
-    function applyFontSize() {
-      // Scale English sentences
-      document.querySelectorAll('#sentencesContainer p[id^="sentence-en-"]').forEach(el => {
-        el.style.fontSize = `${currentFontSize}px`;
-        el.style.lineHeight = `${Math.round(currentFontSize * 1.55)}px`;
-      });
-      // Proportionally scale Chinese translation text
-      const zhSize = Math.max(13, Math.round(currentFontSize * 0.78));
-      document.querySelectorAll('#sentencesContainer .zh-text').forEach(el => {
-        el.style.fontSize = `${zhSize}px`;
-        el.style.lineHeight = `${Math.round(zhSize * 1.5)}px`;
-      });
     }
 
     function updateSaveStatus(isSuccess, isError = false) {
@@ -465,16 +532,162 @@
       saveToLocalStorage(); 
     }
 
+    // Fetch server books registry file (book/books.json)
+    async function fetchServerBooksRegistry() {
+      try {
+        const res = await fetch('book/books.json');
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data) && data.length > 0) {
+            serverBooks = data;
+          }
+        }
+      } catch (e) {
+        console.log("Using built-in server books registry manifest:", e.message);
+      }
+      populateBookDropdown();
+    }
+
+    function populateBookDropdown() {
+      const select = document.getElementById('selectBook');
+      select.innerHTML = '';
+
+      serverBooks.forEach(book => {
+        const opt = document.createElement('option');
+        opt.value = String(book.id);
+        opt.textContent = `${book.emoji || '📖'} ${book.series || 'Book ' + book.id}: ${book.title}`;
+        if (String(book.id) === String(currentBookId)) {
+          opt.selected = true;
+        }
+        select.appendChild(opt);
+      });
+
+      updateHeaderBookInfo();
+    }
+
+    function updateHeaderBookInfo() {
+      const book = getCurrentBookConfig();
+      document.getElementById('headerBookEmoji').textContent = book.emoji || '📖';
+      document.getElementById('badgeCurrentBookTag').textContent = book.series || `Book ${book.id}`;
+    }
+
+    // Dynamic Script Loader: Loads JS files from server side (book/{id}/context/ & quiz/)
+    async function loadBookScriptsFromServer(bId) {
+      stopAudioPlayback();
+      const book = getCurrentBookConfig();
+      const totalChapters = book.totalChapters || 16;
+
+      // Show loading indicator in UI
+      const banner = document.getElementById('bookLoadingBanner');
+      if (banner) banner.classList.remove('hidden');
+
+      // Clear existing loaded data
+      window.chaptersData = [];
+      window.quizzesData = {};
+
+      // Remove previous dynamic script tags
+      document.querySelectorAll('script[data-dynamic-book-script]').forEach(el => el.remove());
+
+      // Generate load promises for all chapter contexts and quizzes
+      const scriptPromises = [];
+      for (let i = 1; i <= totalChapters; i++) {
+        scriptPromises.push(injectScriptTag(`book/${bId}/context/chapter${i}.js`));
+        scriptPromises.push(injectScriptTag(`book/${bId}/quiz/quiz${i}.js`));
+      }
+
+      // Wait for all scripts to load from server
+      await Promise.allSettled(scriptPromises);
+
+      // Sort chaptersData chronologically by chapterId in case network returned out of order
+      if (Array.isArray(window.chaptersData)) {
+        window.chaptersData.sort((a, b) => (Number(a.chapterId) || 0) - (Number(b.chapterId) || 0));
+      }
+
+      if (banner) banner.classList.add('hidden');
+
+      // Ensure currentChapterIndex is within bounds
+      if (currentChapterIndex >= window.chaptersData.length) {
+        currentChapterIndex = 0;
+      }
+
+      renderChapterList();
+      loadChapter(currentChapterIndex);
+    }
+
+    function injectScriptTag(src) {
+      return new Promise((resolve) => {
+        const script = document.createElement('script');
+        script.src = src;
+        script.charset = 'UTF-8';
+        script.setAttribute('data-dynamic-book-script', 'true');
+        script.onload = () => resolve({ src, status: 'loaded' });
+        script.onerror = () => {
+          console.warn(`Server script not found or failed to load: ${src}`);
+          resolve({ src, status: 'error' });
+        };
+        document.head.appendChild(script);
+      });
+    }
+
+    async function switchBook(newBookId) {
+      currentBookId = String(newBookId);
+      currentChapterIndex = 0;
+      updateHeaderBookInfo();
+      saveToLocalStorage();
+      await loadBookScriptsFromServer(currentBookId);
+    }
+
+    function adjustFontSize(delta) {
+      const newSize = currentFontSize + delta;
+      if (newSize >= MIN_FONT_SIZE && newSize <= MAX_FONT_SIZE) {
+        currentFontSize = newSize;
+        applyFontSize();
+        updateFontSizeUI();
+        saveToLocalStorage();
+      }
+    }
+
+    function updateFontSizeUI() {
+      const display = document.getElementById('fontSizeDisplay');
+      if (display) {
+        display.textContent = `${currentFontSize}px`;
+      }
+    }
+
+    function applyFontSize() {
+      document.querySelectorAll('#sentencesContainer p[id^="sentence-en-"]').forEach(el => {
+        el.style.fontSize = `${currentFontSize}px`;
+        el.style.lineHeight = `${Math.round(currentFontSize * 1.55)}px`;
+      });
+      const zhSize = Math.max(13, Math.round(currentFontSize * 0.78));
+      document.querySelectorAll('#sentencesContainer .zh-text').forEach(el => {
+        el.style.fontSize = `${zhSize}px`;
+        el.style.lineHeight = `${Math.round(zhSize * 1.5)}px`;
+      });
+    }
+
     function renderChapterList() {
       const listContainer = document.getElementById('chapterList');
-      listContainer.innerHTML = '<div class="text-xs uppercase font-bold tracking-widest text-amber-600 mb-2 pl-2 pt-2">Chapters</div>';
+      const book = getCurrentBookConfig();
+      const chapters = window.chaptersData || [];
+
+      listContainer.innerHTML = `
+        <div class="flex items-center justify-between mb-2 pl-2 pt-2 border-b border-amber-100 pb-2">
+          <span class="text-xs uppercase font-bold tracking-widest text-amber-600">Chapters</span>
+          <span class="text-xs bg-amber-100 text-amber-800 font-bold px-2 py-0.5 rounded-full">${chapters.length} Chs</span>
+        </div>
+      `;
       
-      if (!window.chaptersData || window.chaptersData.length === 0) {
-        listContainer.innerHTML += '<div class="p-4 text-sm text-slate-500">Loading chapters...</div>';
+      if (chapters.length === 0) {
+        listContainer.innerHTML += `
+          <div class="p-4 text-xs text-slate-500 leading-relaxed">
+            No chapter files found on server in <code>book/${book.id}/context/</code>.
+          </div>
+        `;
         return;
       }
 
-      window.chaptersData.forEach((ch, index) => {
+      chapters.forEach((ch, index) => {
         const btn = document.createElement('button');
         const isActive = index === currentChapterIndex;
         
@@ -485,7 +698,7 @@
         btn.onclick = () => loadChapter(index);
         
         btn.innerHTML = `
-          <span class="text-xs font-bold ${isActive ? 'text-amber-600' : 'text-slate-400'}">Ch ${ch.chapterId}</span>
+          <span class="text-xs font-bold ${isActive ? 'text-amber-600' : 'text-slate-400'}">Ch ${ch.chapterId || (index + 1)}</span>
           <span class="text-sm font-bold truncate ${isActive ? 'text-amber-900' : ''}">${ch.titleEn}</span>
         `;
         listContainer.appendChild(btn);
@@ -498,12 +711,13 @@
       stopAudioPlayback();
       currentChapterIndex = index;
       
-      // Load saved puzzle step for this chapter
-      const chState = getChapterState(currentChapterIndex);
+      // Load saved state for this specific book and chapter
+      const chState = getChapterState(currentBookId, currentChapterIndex);
       puzzleStep = chState.puzzleStep || 0;
       
-      document.getElementById('displayChapterNum').textContent = `Chapter ${window.chaptersData[index].chapterId}`;
-      document.getElementById('displayChapterTitle').textContent = window.chaptersData[index].titleEn;
+      const chapterObj = window.chaptersData[index];
+      document.getElementById('displayChapterNum').textContent = `Chapter ${chapterObj.chapterId || (index + 1)}`;
+      document.getElementById('displayChapterTitle').textContent = chapterObj.titleEn;
 
       renderChapterList(); 
       initReader();        
@@ -517,6 +731,8 @@
       if(!document.getElementById('fitbView').classList.contains('hidden')) {
         renderFitb();      
       }
+
+      saveToLocalStorage();
     }
 
     function buildSentenceHTML(text, vocab, index) {
@@ -551,7 +767,7 @@
       container.innerHTML = "";
       
       if (!window.chaptersData || window.chaptersData.length === 0) return;
-      const currentContent = window.chaptersData[currentChapterIndex].content;
+      const currentContent = window.chaptersData[currentChapterIndex].content || [];
 
       currentContent.forEach((item, index) => {
         const row = document.createElement('div');
@@ -562,9 +778,9 @@
 
         row.innerHTML = `
           <div class="flex items-start justify-between gap-4">
-            <div class="flex-1">
-              <p id="sentence-en-${index}" class="text-slate-800 font-medium">${processedEnHTML}</p>
-              <p class="zh-text text-slate-500 mt-2 font-normal ${showAllZh ? '' : 'hidden'}">${item.zh}</p>
+            <div class="flex-1 min-w-0">
+              <p id="sentence-en-${index}" class="story-text-en text-slate-800 font-medium">${processedEnHTML}</p>
+              <p class="zh-text story-text-zh text-slate-500 mt-2 font-normal ${showAllZh ? '' : 'hidden'}">${item.zh || ''}</p>
             </div>
             <div class="flex space-x-2 shrink-0">
               <button id="btn-speak-${index}" onclick="speakSentence(${index})" class="p-3 bg-amber-100 hover:bg-amber-200 text-amber-800 rounded-xl text-lg transition-transform active:scale-95 shadow-sm min-w-[48px] flex items-center justify-center" title="Read Aloud with Victoria">
@@ -578,6 +794,7 @@
       });
 
       applyFontSize();
+      updateToggleTranslationsButtonUI();
     }
 
     function stopAudioPlayback() {
@@ -626,7 +843,7 @@
       if (icon) icon.textContent = '🔊';
     }
 
-    // Speech Marks synchronized word-level highlighting
+    // Word sync loop with Speechify speech marks
     function startWordSyncLoop(index, speechMarks) {
       const player = document.getElementById('speechifyAudioPlayer');
       const chunks = (speechMarks && speechMarks.chunks) ? speechMarks.chunks : [];
@@ -683,7 +900,6 @@
       syncAnimFrameId = requestAnimationFrame(update);
     }
 
-    // Play text using Speechify with full word highlight support
     async function playSpeechifyText(text, index = -1, isWord = false) {
       stopAudioPlayback();
 
@@ -817,7 +1033,7 @@
     }
 
     function speakSentence(index) {
-      if (!window.chaptersData) return;
+      if (!window.chaptersData || !window.chaptersData[currentChapterIndex]) return;
       const currentContent = window.chaptersData[currentChapterIndex].content;
       const text = currentContent[index].en;
       playSpeechifyText(text, index, false);
@@ -833,15 +1049,24 @@
       p.classList.toggle('hidden');
     }
 
+    function updateToggleTranslationsButtonUI() {
+      const btn = document.getElementById('btnToggleAllZh');
+      if (btn) {
+        btn.textContent = showAllZh ? 'Hide Translations' : 'Show Translations';
+      }
+    }
+
     function toggleAllTranslations() {
       showAllZh = !showAllZh;
       document.querySelectorAll('.zh-text').forEach(el => {
         if (showAllZh) el.classList.remove('hidden');
         else el.classList.add('hidden');
       });
+      updateToggleTranslationsButtonUI();
     }
 
     function showVocab(wordKey, index) {
+      if (!window.chaptersData || !window.chaptersData[currentChapterIndex]) return;
       const currentContent = window.chaptersData[currentChapterIndex].content;
       const cleanWord = wordKey.toLowerCase();
       const v = currentContent[index].vocab[cleanWord] || currentContent[index].vocab[wordKey];
@@ -861,10 +1086,10 @@
       stopAudioPlayback();
     }
 
-    // --- Grammar Puzzle Module with Persistence ---
     function initPuzzle() {
-      const currentContent = window.chaptersData[currentChapterIndex].content;
-      const chState = getChapterState(currentChapterIndex);
+      if (!window.chaptersData || !window.chaptersData[currentChapterIndex]) return;
+      const currentContent = window.chaptersData[currentChapterIndex].content || [];
+      const chState = getChapterState(currentBookId, currentChapterIndex);
       puzzleStep = chState.puzzleStep || 0;
 
       if(!currentContent[puzzleStep] || !currentContent[puzzleStep].puzzle) {
@@ -920,7 +1145,8 @@
     }
 
     function checkSentence() {
-      const currentContent = window.chaptersData[currentChapterIndex].content;
+      if (!window.chaptersData || !window.chaptersData[currentChapterIndex]) return;
+      const currentContent = window.chaptersData[currentChapterIndex].content || [];
       if(!currentContent[puzzleStep] || !currentContent[puzzleStep].puzzle) return;
 
       const currentPuzzle = currentContent[puzzleStep].puzzle;
@@ -933,8 +1159,7 @@
 
         setTimeout(() => {
           puzzleStep = (puzzleStep + 1) % currentContent.length;
-          // Persist step
-          getChapterState(currentChapterIndex).puzzleStep = puzzleStep;
+          getChapterState(currentBookId, currentChapterIndex).puzzleStep = puzzleStep;
           saveToLocalStorage();
           initPuzzle();
         }, 1500);
@@ -945,12 +1170,15 @@
       }
     }
     
-    // --- Chapter Quiz Module with Option A (Resume Directly) ---
     function renderQuiz() {
-      const quizData = window.quizzesData[currentChapterIndex];
+      const quizData = window.quizzesData ? window.quizzesData[currentChapterIndex] : null;
       
       if (!quizData || !quizData.questions || quizData.questions.length === 0) {
-          document.getElementById('quizContainer').innerHTML = '<div class="p-4 text-slate-500">No reading quiz available for this chapter yet.</div>';
+          document.getElementById('quizContainer').innerHTML = `
+            <div class="p-6 text-slate-500 bg-slate-50 rounded-2xl border border-slate-200">
+              No reading comprehension quiz found for this chapter on server (<code>quiz${currentChapterIndex + 1}.js</code>).
+            </div>
+          `;
           document.getElementById('btnSubmitQuiz').classList.add('hidden');
           document.getElementById('btnShowAnswer').classList.add('hidden');
           document.getElementById('btnNextQuiz').classList.add('hidden');
@@ -960,19 +1188,20 @@
       currentQuizQuestions = quizData.questions;
       document.getElementById('totalQuizNumber').textContent = currentQuizQuestions.length;
 
-      const chState = getChapterState(currentChapterIndex);
+      const chState = getChapterState(currentBookId, currentChapterIndex);
       
-      if (!quizRewarded[currentChapterIndex]) {
-          quizRewarded[currentChapterIndex] = 0; 
+      if (!quizRewarded[currentBookId]) {
+          quizRewarded[currentBookId] = {};
+      }
+      if (!quizRewarded[currentBookId][currentChapterIndex]) {
+          quizRewarded[currentBookId][currentChapterIndex] = 0; 
       }
 
-      // Check if this chapter was already completed
       if (chState.quiz.isCompleted) {
         showQuizCompletedScreen();
         return;
       }
 
-      // Resume at saved currentIndex
       currentQuizIndex = chState.quiz.currentIndex || 0;
       if (currentQuizIndex >= currentQuizQuestions.length) {
         currentQuizIndex = currentQuizQuestions.length - 1;
@@ -994,7 +1223,7 @@
           <div class="text-center py-8">
               <span class="text-6xl mb-4 block">🏆</span>
               <h4 class="text-2xl font-bold text-slate-800">Reading Comprehension Completed!</h4>
-              <p class="text-slate-500 mt-2">You have finished all 12 questions for this chapter.</p>
+              <p class="text-slate-500 mt-2">You have completed all questions for this chapter.</p>
               <button onclick="resetAndRetryQuiz()" class="mt-6 bg-blue-500 hover:bg-blue-600 text-white font-bold px-8 py-3 rounded-2xl shadow-md transition-transform active:scale-95 text-base">
                 🔄 Reset & Retry Quiz
               </button>
@@ -1007,7 +1236,7 @@
     }
 
     function resetAndRetryQuiz() {
-      const chState = getChapterState(currentChapterIndex);
+      const chState = getChapterState(currentBookId, currentChapterIndex);
       chState.quiz.currentIndex = 0;
       chState.quiz.isCompleted = false;
       saveToLocalStorage();
@@ -1066,9 +1295,11 @@
 
         if (isCorrect) {
             const maxScoreForChapter = currentQuizQuestions.length * 5;
-            if (quizRewarded[currentChapterIndex] < maxScoreForChapter) {
+            if (!quizRewarded[currentBookId]) quizRewarded[currentBookId] = {};
+            const currentAwarded = quizRewarded[currentBookId][currentChapterIndex] || 0;
+            if (currentAwarded < maxScoreForChapter) {
                 addScore(5); 
-                quizRewarded[currentChapterIndex] += 5;
+                quizRewarded[currentBookId][currentChapterIndex] = currentAwarded + 5;
             }
         }
     }
@@ -1143,7 +1374,7 @@
     }
 
     function nextQuizQuestion() {
-        const chState = getChapterState(currentChapterIndex);
+        const chState = getChapterState(currentBookId, currentChapterIndex);
 
         if (currentQuizIndex < currentQuizQuestions.length - 1) {
             currentQuizIndex++;
@@ -1157,21 +1388,21 @@
         }
     }
 
-    // --- Fill in the Blank Module with Fixed Questions & Option A ---
     function renderFitb() {
-      const chState = getChapterState(currentChapterIndex);
+      const chState = getChapterState(currentBookId, currentChapterIndex);
 
-      if (!fitbRewarded[currentChapterIndex]) {
-          fitbRewarded[currentChapterIndex] = 0; 
+      if (!fitbRewarded[currentBookId]) {
+          fitbRewarded[currentBookId] = {};
+      }
+      if (!fitbRewarded[currentBookId][currentChapterIndex]) {
+          fitbRewarded[currentBookId][currentChapterIndex] = 0; 
       }
 
-      // If already completed, show completed screen
       if (chState.fitb.isCompleted) {
         showFitbCompletedScreen();
         return;
       }
 
-      // If this chapter doesn't have generated questions yet, generate and save them
       if (!chState.fitb.questions || chState.fitb.questions.length === 0) {
         generateFitbQuestionsForChapter(currentChapterIndex);
       }
@@ -1180,7 +1411,7 @@
       document.getElementById('totalFitbNumber').textContent = currentFitbQuestions.length;
 
       if (currentFitbQuestions.length === 0) {
-          document.getElementById('fitbContainer').innerHTML = '<div class="p-4 text-slate-500">No vocabulary quiz available for this chapter yet.</div>';
+          document.getElementById('fitbContainer').innerHTML = '<div class="p-4 text-slate-500">No vocabulary items found in this chapter to create a fill-in-the-blank test.</div>';
           document.getElementById('btnSubmitFitb').classList.add('hidden');
           document.getElementById('btnShowFitbAnswer').classList.add('hidden');
           document.getElementById('btnNextFitb').classList.add('hidden');
@@ -1203,7 +1434,9 @@
     }
 
     function generateFitbQuestionsForChapter(chIdx) {
-      const content = window.chaptersData[chIdx].content;
+      if (!window.chaptersData || !window.chaptersData[chIdx]) return;
+      const content = window.chaptersData[chIdx].content || [];
+
       let candidateWords = [];
       let vocabToSentenceMap = {};
       
@@ -1266,7 +1499,7 @@
           };
       });
 
-      const chState = getChapterState(chIdx);
+      const chState = getChapterState(currentBookId, chIdx);
       chState.fitb.questions = generated;
       chState.fitb.currentIndex = 0;
       chState.fitb.isCompleted = false;
@@ -1279,7 +1512,7 @@
           <div class="text-center py-8">
               <span class="text-6xl mb-4 block">🎓</span>
               <h4 class="text-2xl font-bold text-slate-800">Vocabulary Quiz Completed!</h4>
-              <p class="text-slate-500 mt-2">You mastered all 12 vocabulary fill-in-the-blank questions.</p>
+              <p class="text-slate-500 mt-2">You mastered all vocabulary fill-in-the-blank questions.</p>
               <button onclick="resetAndRetryFitb()" class="mt-6 bg-fuchsia-500 hover:bg-fuchsia-600 text-white font-bold px-8 py-3 rounded-2xl shadow-md transition-transform active:scale-95 text-base">
                 🔄 Reset & Retry Vocab
               </button>
@@ -1292,7 +1525,7 @@
     }
 
     function resetAndRetryFitb() {
-      const chState = getChapterState(currentChapterIndex);
+      const chState = getChapterState(currentBookId, currentChapterIndex);
       chState.fitb.currentIndex = 0;
       chState.fitb.isCompleted = false;
       saveToLocalStorage();
@@ -1351,9 +1584,11 @@
 
         if (isCorrect) {
             const maxScoreForChapter = currentFitbQuestions.length * 5;
-            if (fitbRewarded[currentChapterIndex] < maxScoreForChapter) {
+            if (!fitbRewarded[currentBookId]) fitbRewarded[currentBookId] = {};
+            const currentAwarded = fitbRewarded[currentBookId][currentChapterIndex] || 0;
+            if (currentAwarded < maxScoreForChapter) {
                 addScore(5); 
-                fitbRewarded[currentChapterIndex] += 5;
+                fitbRewarded[currentBookId][currentChapterIndex] = currentAwarded + 5;
             }
         }
     }
@@ -1428,7 +1663,7 @@
     }
 
     function nextFitbQuestion() {
-        const chState = getChapterState(currentChapterIndex);
+        const chState = getChapterState(currentBookId, currentChapterIndex);
 
         if (currentFitbIndex < currentFitbQuestions.length - 1) {
             currentFitbIndex++;
@@ -1442,7 +1677,7 @@
         }
     }
 
-    // --- Tab Switching with State Preservation ---
+    // Tab Switching with State Preservation
     function switchTab(tab) {
       stopAudioPlayback();
 
@@ -1467,18 +1702,19 @@
       } else if (tab === 'quiz') {
         document.getElementById('quizView').classList.remove('hidden');
         document.getElementById('tabQuiz').className = "flex-1 py-3 px-4 rounded-2xl font-bold bg-blue-500 text-white shadow-md transition-transform active:scale-95 whitespace-nowrap";
-        renderQuiz(); // Resumes saved progress directly
+        renderQuiz();
       } else if (tab === 'fitb') {
         document.getElementById('fitbView').classList.remove('hidden');
         document.getElementById('tabFitb').className = "flex-1 py-3 px-4 rounded-2xl font-bold bg-fuchsia-500 text-white shadow-md transition-transform active:scale-95 whitespace-nowrap";
-        renderFitb(); // Resumes saved progress directly with fixed questions
+        renderFitb();
       }
     }
 
-    window.addEventListener('load', () => {
+    // --- Application Initialization ---
+    window.addEventListener('load', async () => {
       loadFromLocalStorage();
-      renderChapterList();
-      loadChapter(0);
+      await fetchServerBooksRegistry();
+      await loadBookScriptsFromServer(currentBookId);
     }); 
   </script>
 </body>

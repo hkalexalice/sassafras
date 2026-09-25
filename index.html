@@ -3,1552 +3,1719 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>SpellQuest PYP - Year 3 Spelling Companion</title>
+  <title>Zoey & Sassafras Reading Assistant - Multi-Book Edition</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Comic+Neue:wght@700&display=swap" rel="stylesheet">
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          fontFamily: {
-            sans: ['Plus Jakarta Sans', 'system-ui', 'sans-serif'],
-            kid: ['Comic Neue', 'cursive', 'sans-serif']
-          },
-          colors: {
-            brand: {
-              50: '#f0fdf4',
-              100: '#dcfce7',
-              200: '#bbf7d0',
-              500: '#22c55e',
-              600: '#16a34a',
-              700: '#15803d',
-              800: '#166534',
-              900: '#14532d'
-            }
-          }
-        }
-      }
-    }
-  </script>
+  
   <style>
-    * {
-      -webkit-touch-callout: none;
+    @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Noto+Sans+TC:wght@400;700&display=swap');
+    body { 
+      font-family: 'Fredoka', 'Noto Sans TC', sans-serif; 
+      background-color: #fdfbeb; 
       -webkit-tap-highlight-color: transparent;
     }
-    input, textarea {
-      -webkit-user-select: auto;
-      user-select: auto;
+    
+    .vocab-badge { cursor: pointer; transition: all 0.2s ease; }
+    .vocab-badge:hover { transform: translateY(-2px); }
+
+    /* Sentence reading active row glow */
+    .sentence-playing {
+      background-color: #fef3c7 !important;
+      box-shadow: 0 0 0 2px #f59e0b, 0 8px 16px -2px rgba(245, 158, 11, 0.15) !important;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     }
-    @keyframes pulse-ring {
-      0% { transform: scale(0.96); opacity: 0.9; }
-      50% { transform: scale(1.04); opacity: 0.5; }
-      100% { transform: scale(0.96); opacity: 0.9; }
+
+    /* Word-level Karaoke sync highlight with Speechify timestamps */
+    .karaoke-highlight {
+      background-color: #10b981 !important; 
+      color: #ffffff !important; 
+      transform: scale(1.08); 
+      display: inline-block;
+      border-radius: 0.375rem;
+      padding: 0 0.25rem;
+      box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.3);
+      transition: all 0.08s ease-in-out;
     }
-    .animate-pulse-ring {
-      animation: pulse-ring 2.5s infinite ease-in-out;
+
+    /* Justified text styling for story content */
+    .story-text-en {
+      text-align: justify;
+      text-justify: inter-word;
+      word-break: normal;
+      hyphens: auto;
     }
-    .hide-scrollbar::-webkit-scrollbar {
-      display: none;
+
+    .story-text-zh {
+      text-align: justify;
+      text-justify: inter-ideograph;
     }
-    .hide-scrollbar {
-      -ms-overflow-style: none;
-      scrollbar-width: none;
-    }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #fcd34d; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #fbbf24; }
+
+    /* Quiz Option Styling */
+    .quiz-option { transition: all 0.2s ease; }
+    .quiz-option.selected { border-color: #3b82f6; background-color: #eff6ff; }
+    .quiz-option.correct { border-color: #10b981; background-color: #ecfdf5; color: #065f46; }
+    .quiz-option.incorrect { border-color: #ef4444; background-color: #fef2f2; color: #991b1b; }
+    .quiz-option:disabled { cursor: not-allowed; }
   </style>
-</head>
-<body class="bg-slate-100 text-slate-800 min-h-screen font-sans antialiased flex flex-col selection:bg-brand-500 selection:text-white">
 
-  <!-- Production App Navigation Bar -->
-  <header class="sticky top-0 z-50 bg-white/95 backdrop-blur border-b border-slate-200 shadow-sm">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5 flex flex-wrap items-center justify-between gap-3">
-      
-      <!-- Brand & Grade Level Indicator -->
-      <div class="flex items-center space-x-3">
-        <div class="w-11 h-11 rounded-2xl bg-gradient-to-tr from-brand-600 to-emerald-400 flex items-center justify-center text-white font-black text-xl shadow-md shadow-brand-500/20">
-          Sp
-        </div>
-        <div>
-          <div class="flex items-center space-x-2">
-            <h1 class="text-lg sm:text-xl font-extrabold text-slate-900 tracking-tight leading-tight">SpellQuest PYP</h1>
-            <span class="bg-emerald-100 text-brand-800 text-[11px] font-bold px-2 py-0.5 rounded-full">Year 3 Edition</span>
-          </div>
-          <div class="flex items-center space-x-2 text-xs text-slate-500 mt-0.5">
-            <span>Home Learning Book Companion</span>
-            <span>•</span>
-            <span id="headerWeekLabel" class="font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded-md font-mono">data/week3A.js</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- App View Navigation & File Exporter Tool -->
-      <div class="flex items-center space-x-2">
-        <div class="flex items-center bg-slate-100 p-1.5 rounded-2xl border border-slate-200">
-          <button id="navBtnExplorer" onclick="switchMainTab('explorer')" class="px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all bg-white text-brand-700 shadow-sm flex items-center space-x-1.5">
-            <span>📖</span>
-            <span>Word Explorer</span>
-          </button>
-          <button id="navBtnDictation" onclick="switchMainTab('dictation')" class="px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all text-slate-600 hover:text-slate-900 flex items-center space-x-1.5">
-            <span>🎙️</span>
-            <span>Paper Dictation</span>
-          </button>
-        </div>
-
-        <button onclick="openDataModal()" class="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs sm:text-sm font-bold flex items-center space-x-1.5 shadow-md active:scale-95 transition-all">
-          <span>📁</span>
-          <span>Week JS File</span>
-        </button>
-      </div>
-    </div>
-  </header>
-
-  <!-- Independent Week Page Sub-header -->
-  <div class="bg-white border-b border-slate-200 px-4 sm:px-6 py-2.5">
-    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
-      <div class="flex items-center space-x-3 text-xs font-semibold text-slate-600">
-        <span class="flex items-center space-x-1 font-bold text-slate-800">
-          <span>📑</span>
-          <span>Weekly Pages:</span>
-        </span>
-        <div id="weekPillsContainer" class="flex flex-wrap gap-1.5">
-          <span class="text-slate-400 italic text-xs py-1">Searching data/ folder...</span>
-        </div>
-      </div>
-
-      <div class="flex items-center space-x-2 text-xs">
-        <input type="file" id="filePickerInput" accept=".js" multiple class="hidden" onchange="handleFileImport(event)">
-        <button onclick="document.getElementById('filePickerInput').click()" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl flex items-center space-x-1 transition-colors" title="Select .js file directly from iPad Files app">
-          <span>📂</span>
-          <span>Import .js</span>
-        </button>
-
-        <div class="flex items-center bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1">
-          <span class="text-slate-400 mr-1.5 font-mono">data/</span>
-          <input id="customJsInput" type="text" placeholder="week3A.js" class="bg-transparent border-none outline-none font-mono text-xs w-24 text-slate-700">
-          <button onclick="loadCustomWeekFile()" class="ml-1 px-2.5 py-1 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-lg transition-colors">
-            Load
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Notification Banner Box -->
-  <div id="toastNotification" class="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-4 py-3 rounded-2xl shadow-xl text-sm font-semibold flex items-center space-x-2 transition-all transform translate-y-24 opacity-0 pointer-events-none">
-    <span id="toastIcon">✨</span>
-    <span id="toastText">Notification message</span>
-  </div>
-
-  <!-- Empty State Banner -->
-  <div id="noDataState" class="hidden max-w-2xl mx-auto my-12 p-8 bg-white rounded-3xl border-2 border-dashed border-slate-300 text-center space-y-4">
-    <div class="w-16 h-16 mx-auto bg-brand-50 text-brand-600 rounded-2xl flex items-center justify-center text-3xl">
-      📁
-    </div>
-    <h3 class="text-xl font-extrabold text-slate-800">No Weekly Data Loaded Yet</h3>
-    <p class="text-slate-600 text-sm leading-relaxed max-w-md mx-auto">
-      Please save your weekly file (e.g. <code class="bg-slate-100 px-2 py-0.5 rounded font-mono font-bold text-brand-700">week3A.js</code>) inside your <code class="bg-slate-100 px-2 py-0.5 rounded font-mono font-bold">data/</code> folder, or click <strong>Import .js</strong> above.
-    </p>
-    <div class="pt-2 flex justify-center space-x-2">
-      <button onclick="document.getElementById('filePickerInput').click()" class="px-5 py-2.5 bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold rounded-xl shadow-md transition-all">
-        📂 Select week3A.js from Device
-      </button>
-      <button onclick="probeDataFolder()" class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-all">
-        🔄 Re-scan data/ folder
-      </button>
-    </div>
-  </div>
-
-  <!-- ================= TAB 1: WORD EXPLORER VIEW ================= -->
-  <main id="tabExplorerView" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full flex-1 transition-all">
-    
-    <!-- Hero Banner -->
-    <div class="bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-600 rounded-3xl p-5 sm:p-7 text-white shadow-lg shadow-emerald-500/10 mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-      <div>
-        <h2 id="bannerWeekTitle" class="text-2xl sm:text-3xl font-black">Spelling Quest</h2>
-      </div>
-
-      <div class="flex flex-wrap items-center gap-2.5">
-        <!-- Listen All 10 Words Button (3-second interval) -->
-        <button id="btnListenAll" onclick="toggleListenAllWords()" class="bg-white/20 hover:bg-white/30 text-white font-extrabold px-4 sm:px-5 py-3 rounded-2xl shadow text-xs sm:text-sm whitespace-nowrap flex items-center space-x-2 border border-white/20 active:scale-95 transition-all">
-          <span id="listenAllIcon">🎧</span>
-          <span id="listenAllText">Listen All 10 Words</span>
-        </button>
-
-        <button onclick="switchMainTab('dictation')" class="bg-white text-emerald-800 font-extrabold px-5 py-3 rounded-2xl shadow hover:bg-emerald-50 text-xs sm:text-sm whitespace-nowrap flex items-center space-x-2 active:scale-95 transition-all">
-          <span>✍️ Start Paper Dictation</span>
-          <span>→</span>
-        </button>
-      </div>
-    </div>
-
-    <!-- Main Word Workspace -->
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-      
-      <!-- Word List Navigation Panel (Left Column) -->
-      <div class="lg:col-span-4 space-y-4">
-        <div class="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm">
-          <div class="flex items-center justify-between mb-3 pb-2 border-b border-slate-100">
-            <h3 class="font-bold text-slate-800 text-sm flex items-center">
-              <span class="mr-2">📝</span> Target Words (1–10)
-            </h3>
-            <span class="text-[11px] bg-brand-50 text-brand-700 font-extrabold px-2.5 py-0.5 rounded-full">
-              Year 3 Level
-            </span>
-          </div>
-
-          <div id="wordListContainer" class="space-y-1.5"></div>
-
-          <!-- Speech Audio Settings -->
-          <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-600">
-            <div class="flex items-center space-x-1.5">
-              <span class="font-semibold">Speed:</span>
-              <button onclick="setAudioRate(0.8)" id="btnRateSlow" class="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 font-medium transition-colors">🐢 0.8x</button>
-              <button onclick="setAudioRate(1.0)" id="btnRateNormal" class="px-2.5 py-1 rounded-lg bg-brand-500 text-white font-bold transition-colors">🐰 1.0x</button>
-            </div>
-            <div class="flex items-center space-x-1">
-              <span class="font-semibold flex items-center">
-                <span class="w-2 h-2 rounded-full bg-emerald-500 mr-1 animate-pulse" id="voiceStatusDot" title="Speechify AI Connected"></span>
-                Voice:
-              </span>
-              <select id="voiceSelect" onchange="updateVoiceSelection()" class="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-xs font-medium cursor-pointer max-w-[145px]">
-                <option value="geffen_32">Geffen (Natural)</option>
-                <option value="harper_32">Harper (Friendly)</option>
-                <option value="beatrice_32">Beatrice (Clear UK)</option>
-                <option value="hugh_32">Hugh (Warm UK)</option>
-                <option value="george">George (Classic)</option>
-              </select>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Word Details Panel (Right Column) -->
-      <div class="lg:col-span-8 space-y-6">
-        <div class="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-sm relative">
-          
-          <!-- Word Header Banner -->
-          <div class="flex flex-wrap items-start justify-between gap-4 pb-5 border-b border-slate-100">
-            <div>
-              <div class="flex items-center space-x-3">
-                <span id="currentWordNum" class="text-xs sm:text-sm font-extrabold text-slate-400">Word 1 of 10</span>
-                <span id="currentCategoryTag" class="text-xs bg-blue-50 text-blue-700 px-2.5 py-0.5 rounded-full font-bold">Vocabulary</span>
-              </div>
-              <h2 id="currentWordText" class="text-4xl sm:text-5xl font-extrabold tracking-tight font-kid mt-1 text-brand-600">
-                word
-              </h2>
-              <p id="currentPhonetic" class="text-slate-400 font-mono text-sm mt-0.5">/phonetic/</p>
-            </div>
-
-            <!-- Big Audio Button -->
-            <button onclick="speakCurrentWord()" class="flex items-center space-x-2 bg-gradient-to-r from-brand-500 to-emerald-600 text-white font-extrabold px-6 py-3.5 rounded-2xl shadow-lg shadow-brand-500/25 hover:opacity-95 active:scale-95 transition-all">
-              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
-              </svg>
-              <span class="text-base">Listen Word</span>
-            </button>
-          </div>
-
-          <!-- Meaning, Sentences, and IB Prompts -->
-          <div class="mt-6 space-y-4">
-            <div class="bg-slate-50 p-5 rounded-2xl border border-slate-100">
-              <div class="flex items-center justify-between">
-                <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider">💡 Year 3 Meaning</h4>
-                <button onclick="speakText(currentWordData?.meaning)" class="text-xs text-brand-600 font-bold hover:underline flex items-center space-x-1">
-                  <span>Listen 🔊</span>
-                </button>
-              </div>
-              <p id="currentMeaning" class="text-slate-800 text-base sm:text-lg font-medium mt-2 leading-relaxed"></p>
-            </div>
-
-            <div class="bg-brand-50/60 p-5 rounded-2xl border border-brand-100">
-              <div class="flex items-center justify-between">
-                <h4 class="text-xs font-bold text-brand-700 uppercase tracking-wider">✍️ Example Sentence (For Home Learning Book)</h4>
-                <button onclick="speakText(currentWordData?.example)" class="text-xs text-brand-700 font-bold hover:underline flex items-center space-x-1">
-                  <span>Listen 🔊</span>
-                </button>
-              </div>
-              <p id="currentExample" class="text-slate-900 text-base sm:text-lg font-medium mt-2 leading-relaxed"></p>
-            </div>
-
-            <div class="bg-purple-50 p-4 rounded-2xl border border-purple-100 text-xs text-purple-900 flex items-start space-x-3">
-              <span class="text-lg">🤔</span>
-              <div>
-                <span class="font-bold text-purple-800">IB Reflective Question:</span>
-                <p id="currentInquiryPrompt" class="text-purple-700 mt-0.5 text-xs sm:text-sm"></p>
-              </div>
-            </div>
-          </div>
-
-          <!-- Navigation Pagination Buttons -->
-          <div class="flex items-center justify-between mt-6 pt-4 border-t border-slate-100">
-            <button onclick="prevWord()" class="px-5 py-2.5 text-sm font-bold text-slate-700 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors flex items-center space-x-1 active:scale-95">
-              <span>← Previous</span>
-            </button>
-            <div class="flex space-x-1.5" id="dotsContainer"></div>
-            <button onclick="nextWord()" class="px-5 py-2.5 text-sm font-bold bg-slate-900 text-white rounded-xl hover:bg-slate-800 transition-colors flex items-center space-x-1 active:scale-95">
-              <span>Next →</span>
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </main>
-
-  <!-- ================= TAB 2: PAPER DICTATION VIEW ================= -->
-  <main id="tabDictationView" class="hidden max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full flex-1 transition-all">
-    <div class="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-sm space-y-8">
-      
-      <!-- Test Header & Settings Slider -->
-      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-5">
-        <div>
-          <div class="flex items-center space-x-2">
-            <span class="bg-indigo-100 text-indigo-800 text-xs font-black px-2.5 py-0.5 rounded-full">Pencil & Paper Mode</span>
-            <span class="text-xs text-slate-400 font-semibold">• No typing required</span>
-          </div>
-          <h2 id="dictationHeaderTitle" class="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-1">
-            Paper Dictation Test 🎙️
-          </h2>
-          <p class="text-slate-500 text-xs sm:text-sm mt-1">
-            The app speaks each word <strong class="text-slate-800">3 times</strong>, then counts down while your child writes on paper in their Home Learning Book.
-          </p>
-        </div>
-
-        <div class="bg-slate-50 border border-slate-200 p-4 rounded-2xl w-full md:w-80">
-          <div class="flex items-center justify-between mb-1.5">
-            <span class="text-xs font-bold text-slate-700">Writing Wait Time:</span>
-            <span id="timerSettingDisplay" class="text-sm font-black text-brand-600 bg-white px-2 py-0.5 rounded-lg border border-slate-200">
-              15 seconds
-            </span>
-          </div>
-          <input type="range" id="intervalSlider" min="5" max="25" step="1" value="15" oninput="updateIntervalSetting(this.value)" class="w-full accent-brand-600 cursor-pointer">
-          <div class="flex justify-between text-[10px] text-slate-400 font-semibold mt-1">
-            <span>⚡ 5s (Fast)</span>
-            <span>⭐ 15s (Standard P3)</span>
-            <span>🐢 25s (Relaxed)</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Stage 1: Ready to Start (Idle) -->
-      <div id="dictationStageIdle" class="text-center py-10 px-4">
-        <div class="w-24 h-24 mx-auto rounded-3xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-4xl shadow-inner mb-4 animate-pulse-ring">
-          ✏️
-        </div>
-        <h3 class="text-xl sm:text-2xl font-black text-slate-800">Ready for this week's 10-word dictation?</h3>
-        <p class="text-slate-500 text-xs sm:text-sm max-w-md mx-auto mt-2 leading-relaxed">
-          Open your <strong>Home Learning Book</strong>, grab your pencil, and tap Start. The app will read each word 3 times with pauses for handwriting.
-        </p>
-
-        <div class="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
-          <button onclick="startDictationSession()" class="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-brand-600 to-emerald-600 text-white text-base sm:text-lg font-extrabold rounded-2xl shadow-xl shadow-brand-500/25 active:scale-95 transition-all flex items-center justify-center space-x-2">
-            <span>▶️ Start Dictation Now</span>
-          </button>
-        </div>
-      </div>
-
-      <!-- Stage 2: Active Test in Progress -->
-      <div id="dictationStageActive" class="hidden space-y-6">
-        <div class="flex items-center justify-between bg-slate-50 p-4 rounded-2xl border border-slate-100">
-          <div class="flex items-center space-x-2">
-            <span class="text-xs font-extrabold text-slate-500 uppercase tracking-wider">Progress:</span>
-            <span id="activeWordStep" class="text-sm font-black text-slate-800">Word 1 of 10</span>
-          </div>
-          <div class="w-1/2 bg-slate-200 h-3 rounded-full overflow-hidden">
-            <div id="dictationOverallProgress" class="bg-brand-500 h-full w-0 transition-all duration-300"></div>
-          </div>
-          <span id="dictationStatusBadge" class="text-xs font-bold px-3 py-1 rounded-full bg-blue-100 text-blue-800">
-            Speaking (1/3)
-          </span>
-        </div>
-
-        <div class="bg-gradient-to-b from-slate-900 to-slate-800 text-white rounded-3xl p-8 sm:p-12 text-center relative overflow-hidden shadow-xl">
-          <div class="relative z-10 space-y-4">
-            <div id="stageSubPrompt" class="text-sm uppercase tracking-widest text-emerald-400 font-extrabold">
-              Listen carefully
-            </div>
-
-            <div class="text-6xl sm:text-7xl font-black font-kid text-white tracking-tight" id="activeWordBigNumber">
-              # 1
-            </div>
-
-            <!-- Speech Repetition Indicator (3 circles) -->
-            <div class="flex justify-center space-x-3 pt-2" id="speechRepeatDots">
-              <span class="w-3.5 h-3.5 rounded-full bg-brand-400"></span>
-              <span class="w-3.5 h-3.5 rounded-full bg-white/20"></span>
-              <span class="w-3.5 h-3.5 rounded-full bg-white/20"></span>
-            </div>
-
-            <!-- Writing Countdown Timer Box -->
-            <div id="writingCountdownBox" class="pt-4 hidden">
-              <div class="text-xs text-slate-300 font-bold uppercase tracking-wider mb-2">
-                Writing Time Remaining:
-              </div>
-              <div class="inline-flex items-center justify-center w-28 h-28 rounded-full border-4 border-brand-500 bg-white/10 text-4xl font-extrabold text-brand-300 shadow-inner">
-                <span id="countdownNumber">15</span>s
-              </div>
-              <p class="text-xs text-slate-300 mt-3 font-medium">
-                Write neatly with pencil in your book! 📝
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <!-- Controls (Repeat, Pause, Next, Stop) -->
-        <div class="flex flex-wrap items-center justify-between gap-3 pt-2">
-          <button onclick="abortDictation()" class="px-5 py-3 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-sm transition-colors">
-            ⏹️ Stop Test
-          </button>
-
-          <div class="flex items-center space-x-2">
-            <button onclick="repeatCurrentDictationWord()" class="px-5 py-3 rounded-2xl bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold text-sm flex items-center space-x-1.5 active:scale-95 transition-all">
-              <span>🔁 Repeat Word (3x)</span>
-            </button>
-            <button onclick="pauseResumeDictation()" id="btnPauseResume" class="px-5 py-3 rounded-2xl bg-slate-800 hover:bg-slate-900 text-white font-bold text-sm flex items-center space-x-1.5 active:scale-95 transition-all">
-              <span id="pauseIcon">⏸️</span>
-              <span id="pauseText">Pause</span>
-            </button>
-            <button onclick="skipToNextDictationWord()" class="px-6 py-3 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white font-extrabold text-sm flex items-center space-x-1.5 shadow-md active:scale-95 transition-all">
-              <span>Next Word ⏭️</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Stage 3: Test Finished & Marking Sheet -->
-      <div id="dictationStageComplete" class="hidden space-y-6">
-        <div class="text-center py-6 bg-emerald-50 rounded-3xl border border-emerald-200 p-6">
-          <div class="text-4xl mb-2">🎉</div>
-          <h3 class="text-2xl font-black text-emerald-900">Dictation Finished! Wonderful Effort!</h3>
-          <p class="text-emerald-800 text-xs sm:text-sm mt-1">
-            Now pick up your purple checking pen and check your paper spelling against the official answer key below.
-          </p>
-        </div>
-
-        <div class="border border-slate-200 rounded-2xl overflow-hidden bg-white shadow-sm">
-          <div class="bg-slate-100 p-3.5 font-extrabold text-slate-800 text-xs sm:text-sm flex items-center justify-between">
-            <span>Weekly Paper Check Key</span>
-            <span class="text-slate-500 font-semibold">10 Target Words</span>
-          </div>
-          <div id="dictationAnswerKeyList" class="divide-y divide-slate-100"></div>
-        </div>
-
-        <div class="flex justify-center space-x-3 pt-4">
-          <button onclick="restartDictation()" class="px-6 py-3 rounded-2xl bg-brand-600 text-white font-bold text-sm active:scale-95 shadow-md transition-all hover:bg-brand-700">
-            🔄 Retake Test
-          </button>
-          <button onclick="switchMainTab('explorer')" class="px-6 py-3 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-sm transition-colors">
-            📖 Return to Word Explorer
-          </button>
-        </div>
-      </div>
-    </div>
-  </main>
-
-  <!-- ================= MODAL: DATA FILE INSPECTOR & DOWNLOADER ================= -->
-  <div id="dataModal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-    <div class="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl border border-slate-100 space-y-5">
-      <div class="flex items-center justify-between border-b border-slate-100 pb-4">
-        <div class="flex items-center space-x-2.5">
-          <div class="w-9 h-9 rounded-xl bg-brand-600 text-white flex items-center justify-center text-lg font-bold">
-            📁
-          </div>
-          <div>
-            <h3 class="font-extrabold text-slate-900 text-lg flex items-center space-x-2">
-              <span>Weekly Data File:</span>
-              <span id="modalFileNameBadge" class="bg-brand-50 text-brand-700 px-2 py-0.5 rounded-lg text-sm font-mono font-bold">data/week3A.js</span>
-            </h3>
-            <p class="text-xs text-slate-500">Save this file directly into your local <code>data/</code> folder</p>
-          </div>
-        </div>
-        <button onclick="closeDataModal()" class="w-8 h-8 rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 flex items-center justify-center text-sm font-bold">
-          ✕
-        </button>
-      </div>
-
-      <div class="space-y-3">
-        <div class="flex items-center justify-between">
-          <p class="text-xs text-slate-600">Select file to inspect or download:</p>
-          <div class="flex space-x-1.5" id="modalWeekSelector"></div>
-        </div>
-
-        <div class="relative">
-          <textarea id="dataJsCodeDisplay" readonly class="w-full h-64 bg-slate-900 text-emerald-300 font-mono text-xs p-4 rounded-2xl border border-slate-800 focus:outline-none select-all"></textarea>
-        </div>
-
-        <div class="flex items-center justify-between pt-2">
-          <span id="copyToastMessage" class="text-xs font-bold text-brand-600 opacity-0 transition-opacity">
-            ✓ Copied to clipboard!
-          </span>
-          <div class="flex space-x-2">
-            <button onclick="copyDataFileCode()" class="px-4 py-2.5 rounded-xl text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 active:scale-95 transition-all flex items-center space-x-1.5">
-              <span>📋</span>
-              <span>Copy JS Code</span>
-            </button>
-            <button onclick="downloadActiveWeekJsFile()" class="px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-brand-600 hover:bg-brand-700 active:scale-95 shadow transition-all flex items-center space-x-1.5">
-              <span>💾</span>
-              <span id="btnDownloadLabel">Download week3A.js</span>
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Registration interface for independent weekly data files -->
+  <!-- Global pre-loaders initialized dynamically per active book -->
   <script>
-    window.SPELLQUEST_PAGES = window.SPELLQUEST_PAGES || {};
-    
-    window.registerSpellingWeek = function(weekConfig) {
-      if (weekConfig && (weekConfig.id || weekConfig.fileName)) {
-        const pageKey = (weekConfig.id || weekConfig.fileName.replace(/\.js$/i, '')).trim();
-        weekConfig.pageName = pageKey;
-        window.SPELLQUEST_PAGES[pageKey] = weekConfig;
-        
-        if (typeof window.onWeekRegistered === 'function') {
-          window.onWeekRegistered(pageKey);
-        }
-      }
-    };
+    window.chaptersData = [];
+    window.quizzesData = {}; 
   </script>
+</head>
+
+<body class="text-slate-800 min-h-screen p-4 md:p-6 flex flex-col">
+  <!-- Top Navigation Bar -->
+  <div class="max-w-6xl w-full mx-auto flex flex-col md:flex-row justify-between items-center bg-white p-4 rounded-2xl shadow-sm border-2 border-amber-200 mb-6 gap-4 flex-shrink-0">
+    <div class="flex items-center space-x-3">
+      <span class="text-3xl" id="headerBookEmoji">🐉</span>
+      <div>
+        <h1 class="text-xl font-bold text-amber-900 flex items-center gap-2">
+          <span>Zoey & Sassafras Assistant</span>
+          <span id="badgeCurrentBookTag" class="text-xs bg-amber-100 text-amber-800 font-bold px-2 py-0.5 rounded-md">Book 1</span>
+        </h1>
+        <p class="text-xs text-amber-700">Magical Animal Rescue Diary • Voice: Victoria (Speechify AI)</p>
+      </div>
+    </div>
+    
+    <div class="flex items-center space-x-3 flex-wrap justify-end">
+      <!-- Server-Side Book Selector Dropdown -->
+      <div class="flex items-center bg-amber-50 border-2 border-amber-300 rounded-xl px-2 py-1 shadow-sm">
+        <label for="selectBook" class="text-xs font-bold text-amber-900 mr-2 select-none flex items-center gap-1">
+          <span>📚</span> <span>Book:</span>
+        </label>
+        <select id="selectBook" onchange="switchBook(this.value)" class="bg-white text-amber-950 font-bold text-sm rounded-lg px-2 py-1 border border-amber-200 outline-none focus:ring-2 focus:ring-amber-400 cursor-pointer max-w-[210px] truncate">
+          <!-- Loaded dynamically from book/books.json -->
+        </select>
+      </div>
+
+      <!-- How to Add Books Info Button -->
+      <button onclick="openHowToAddModal()" class="bg-amber-100 hover:bg-amber-200 text-amber-900 text-xs font-bold px-3 py-2 rounded-xl shadow-xs transition-transform active:scale-95 flex items-center gap-1" title="How to add new books on server">
+        <span>ℹ️</span> <span>Add Books</span>
+      </button>
+
+      <!-- Auto-save Status Indicator -->
+      <div id="saveStatusContainer" class="flex items-center bg-emerald-50 px-3 py-2 rounded-xl border border-emerald-200 transition-colors">
+        <span id="saveStatus" class="text-xs font-bold text-emerald-600">💾 Progress Saved</span>
+      </div>
+
+      <!-- Score Display -->
+      <div class="flex items-center space-x-2 bg-amber-100 px-4 py-2 rounded-full shadow-inner">
+        <span class="text-lg">⭐</span>
+        <span id="score" class="font-bold text-amber-800 text-lg">0</span>
+        <span class="text-xs text-amber-700 font-bold">Points</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Content Layout -->
+  <div class="max-w-6xl w-full mx-auto flex flex-col md:flex-row gap-6 flex-1 min-h-0">
+    <!-- Left Sidebar: Chapter List -->
+    <div class="w-full md:w-64 shrink-0 flex flex-col gap-2 bg-white p-4 rounded-3xl shadow-sm border-2 border-amber-100 overflow-y-auto" id="chapterList">
+      <div class="p-4 text-sm text-amber-700 animate-pulse font-bold flex items-center gap-2">
+        <span>⏳</span> <span>Loading book data...</span>
+      </div>
+    </div>
+
+    <!-- Right Content Area -->
+    <div class="flex-1 flex flex-col min-w-0">
+      <!-- Navigation Tabs -->
+      <div class="flex space-x-3 mb-4 pt-2 pb-2 z-10 overflow-x-auto flex-shrink-0 px-1">
+        <button onclick="switchTab('reader')" id="tabReader" class="flex-1 py-3 px-4 rounded-2xl font-bold bg-amber-500 text-white shadow-md transition-transform active:scale-95 whitespace-nowrap">📖 Read Story</button>
+        <button onclick="switchTab('game')" id="tabGame" class="flex-1 py-3 px-4 rounded-2xl font-bold bg-white text-amber-700 border-2 border-amber-200 transition-transform active:scale-95 whitespace-nowrap">🧩 Grammar Puzzle</button>
+        <button onclick="switchTab('quiz')" id="tabQuiz" class="flex-1 py-3 px-4 rounded-2xl font-bold bg-white text-amber-700 border-2 border-amber-200 transition-transform active:scale-95 whitespace-nowrap">📝 Chapter Quiz</button>
+        <button onclick="switchTab('fitb')" id="tabFitb" class="flex-1 py-3 px-4 rounded-2xl font-bold bg-white text-amber-700 border-2 border-amber-200 transition-transform active:scale-95 whitespace-nowrap">✏️ Fill in the Blank</button>
+      </div>
+
+      <!-- Scrollable Main Container -->
+      <div class="flex-1 overflow-y-auto px-1 pb-10">
+        
+        <!-- Module 1: Reader View -->
+        <div id="readerView" class="space-y-4">
+          <div class="bg-white p-6 md:p-8 rounded-3xl shadow-sm border-2 border-amber-100">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 border-b border-amber-100 pb-4 gap-4">
+              <div>
+                <span id="displayChapterNum" class="text-xs uppercase font-bold tracking-widest text-amber-600">Chapter 1</span>
+                <h2 id="displayChapterTitle" class="text-3xl font-bold text-slate-800 mt-1">Loading...</h2>
+              </div>
+              <div class="flex items-center gap-3 flex-wrap">
+                <!-- Font Size Adjuster Controls -->
+                <div class="flex items-center bg-amber-50 border border-amber-200 rounded-xl px-2 py-1 shadow-sm">
+                  <span class="text-xs font-bold text-amber-800 mr-2 select-none">Aa</span>
+                  <button onclick="adjustFontSize(-2)" class="w-8 h-8 flex items-center justify-center rounded-lg bg-white border border-amber-200 text-amber-900 font-bold hover:bg-amber-100 active:scale-90 transition-all text-base shadow-xs" title="Decrease Font Size" aria-label="Decrease Font Size">－</button>
+                  <span id="fontSizeDisplay" class="text-xs font-bold text-amber-800 px-2 select-none min-w-[42px] text-center">20px</span>
+                  <button onclick="adjustFontSize(2)" class="w-8 h-8 flex items-center justify-center rounded-lg bg-white border border-amber-200 text-amber-900 font-bold hover:bg-amber-100 active:scale-90 transition-all text-base shadow-xs" title="Increase Font Size" aria-label="Increase Font Size">＋</button>
+                </div>
+                <button onclick="toggleAllTranslations()" id="btnToggleAllZh" class="text-sm bg-amber-100 hover:bg-amber-200 text-amber-800 font-bold px-4 py-2 rounded-xl transition-colors">
+                  Show Translations
+                </button>
+              </div>
+            </div>
+            <!-- Dynamic Server Loading Indicator Banner -->
+            <div id="bookLoadingBanner" class="hidden p-8 text-center bg-amber-50 rounded-2xl border-2 border-dashed border-amber-300 mb-4">
+              <div class="inline-block w-8 h-8 border-4 border-amber-500 border-t-transparent rounded-full animate-spin mb-3"></div>
+              <p class="font-bold text-amber-900 text-base">Loading book scripts from server...</p>
+              <p class="text-xs text-amber-700 mt-1">Fetching context and quiz files from server directory</p>
+            </div>
+            <div id="sentencesContainer" class="space-y-3"></div>
+          </div>
+        </div>
+
+        <!-- Module 2: Grammar Puzzle Game -->
+        <div id="gameView" class="hidden">
+          <div class="bg-white p-6 md:p-8 rounded-3xl shadow-sm border-2 border-indigo-100">
+            <div class="mb-6 border-b border-indigo-100 pb-4">
+              <span class="text-xs uppercase font-bold tracking-widest text-indigo-600">Grammar Puzzle</span>
+              <h3 class="text-2xl font-bold text-slate-800 mt-1">Build the Sentence!</h3>
+              <p class="text-sm text-slate-500 mt-1">Click the blocks below to put the sentence in the correct order:</p>
+            </div>
+            <div id="dropZone" class="min-h-[80px] bg-indigo-50 border-2 border-dashed border-indigo-200 rounded-2xl p-4 flex flex-wrap gap-2 items-center mb-8">
+              <span id="dropPlaceholder" class="text-sm text-indigo-400">Click words below to place them here...</span>
+            </div>
+            <div id="wordsBank" class="flex flex-wrap gap-3 mb-8"></div>
+            <div class="flex justify-between items-center pt-4 border-t border-slate-100">
+              <p id="feedbackText" class="text-base font-bold"></p>
+              <button onclick="checkSentence()" class="bg-indigo-500 hover:bg-indigo-600 text-white font-bold px-8 py-3 rounded-xl shadow-md transition-transform active:scale-95">
+                Check Answer ✓
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Module 3: Chapter Quiz View -->
+        <div id="quizView" class="hidden">
+           <div class="bg-white p-6 md:p-8 rounded-3xl shadow-sm border-2 border-blue-100">
+            <div class="mb-6 border-b border-blue-100 pb-4 flex justify-between items-end">
+              <div>
+                  <span class="text-xs uppercase font-bold tracking-widest text-blue-600">Reading Comprehension</span>
+                  <h3 class="text-2xl font-bold text-slate-800 mt-1">Chapter Quiz</h3>
+                  <p class="text-sm text-slate-500 mt-1">Test your memory of this chapter!</p>
+              </div>
+              <div class="text-right">
+                  <span class="text-sm font-bold text-slate-500">Question <span id="currentQuizNumber" class="text-blue-600 text-lg">1</span> of <span id="totalQuizNumber">12</span></span>
+              </div>
+            </div>
+            
+            <div id="quizContainer">
+                <div class="mb-6">
+                    <h4 id="quizQuestionText" class="text-xl font-semibold text-slate-800 leading-snug">Loading question...</h4>
+                </div>
+                <div id="quizOptionsContainer" class="space-y-3"></div>
+            </div>
+
+            <div id="quizFeedbackContainer" class="mt-6 p-4 rounded-xl hidden">
+                <p id="quizFeedbackResult" class="font-bold text-lg mb-1"></p>
+                <p id="quizRationaleText" class="text-sm text-slate-600"></p>
+            </div>
+
+            <div class="flex flex-col sm:flex-row justify-between items-center pt-6 mt-6 border-t border-slate-100">
+                <div class="flex space-x-3 mb-4 sm:mb-0 w-full sm:w-auto">
+                    <button id="btnShowAnswer" onclick="showQuizAnswer()" class="flex-1 sm:flex-none bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold px-6 py-3 rounded-xl shadow-sm transition-transform active:scale-95 text-sm hidden">
+                        Reveal Answer
+                    </button>
+                </div>
+                <button id="btnNextQuiz" onclick="nextQuizQuestion()" class="bg-blue-500 hover:bg-blue-600 text-white font-bold px-8 py-3 rounded-xl shadow-md transition-transform active:scale-95 w-full sm:w-auto text-lg hidden">
+                  Next Question ➡️
+                </button>
+                <button id="btnSubmitQuiz" onclick="submitQuizAnswer()" class="bg-amber-500 hover:bg-amber-600 text-white font-bold px-8 py-3 rounded-xl shadow-md transition-transform active:scale-95 w-full sm:w-auto text-lg">
+                  Submit Answer ✓
+                </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Module 4: Fill in the Blank View -->
+        <div id="fitbView" class="hidden">
+           <div class="bg-white p-6 md:p-8 rounded-3xl shadow-sm border-2 border-fuchsia-100">
+            <div class="mb-6 border-b border-fuchsia-100 pb-4 flex justify-between items-end">
+              <div>
+                  <span class="text-xs uppercase font-bold tracking-widest text-fuchsia-600">Vocabulary Check</span>
+                  <h3 class="text-2xl font-bold text-slate-800 mt-1">Fill in the Blank</h3>
+                  <p class="text-sm text-slate-500 mt-1">Choose the correct word to complete the sentence.</p>
+              </div>
+              <div class="text-right">
+                  <span class="text-sm font-bold text-slate-500">Question <span id="currentFitbNumber" class="text-fuchsia-600 text-lg">1</span> of <span id="totalFitbNumber">12</span></span>
+              </div>
+            </div>
+            
+            <div id="fitbContainer">
+                <div class="mb-6">
+                    <h4 id="fitbQuestionText" class="text-xl font-semibold text-slate-800 leading-snug">Loading question...</h4>
+                </div>
+                <div id="fitbOptionsContainer" class="space-y-3"></div>
+            </div>
+
+            <div id="fitbFeedbackContainer" class="mt-6 p-4 rounded-xl hidden">
+                <p id="fitbFeedbackResult" class="font-bold text-lg mb-1"></p>
+                <p id="fitbRationaleText" class="text-sm text-slate-600"></p>
+            </div>
+
+            <div class="flex flex-col sm:flex-row justify-between items-center pt-6 mt-6 border-t border-slate-100">
+                <div class="flex space-x-3 mb-4 sm:mb-0 w-full sm:w-auto">
+                    <button id="btnShowFitbAnswer" onclick="showFitbAnswer()" class="flex-1 sm:flex-none bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold px-6 py-3 rounded-xl shadow-sm transition-transform active:scale-95 text-sm hidden">
+                        Reveal Answer
+                    </button>
+                </div>
+                <button id="btnNextFitb" onclick="nextFitbQuestion()" class="bg-fuchsia-500 hover:bg-fuchsia-600 text-white font-bold px-8 py-3 rounded-xl shadow-md transition-transform active:scale-95 w-full sm:w-auto text-lg hidden">
+                  Next Question ➡️
+                </button>
+                <button id="btnSubmitFitb" onclick="submitFitbAnswer()" class="bg-amber-500 hover:bg-amber-600 text-white font-bold px-8 py-3 rounded-xl shadow-md transition-transform active:scale-95 w-full sm:w-auto text-lg">
+                  Submit Answer ✓
+                </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Server-Side Book Management Instruction Modal -->
+  <div id="howToAddModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center hidden p-4 z-50 overflow-y-auto">
+    <div class="bg-white max-w-xl w-full p-6 md:p-8 rounded-3xl shadow-2xl border-2 border-amber-200 relative my-8">
+      <div class="flex justify-between items-center border-b border-slate-100 pb-3 mb-4">
+        <div class="flex items-center gap-2">
+          <span class="text-2xl">📚</span>
+          <h3 class="text-xl font-bold text-slate-800">Server-Side Book Structure</h3>
+        </div>
+        <button onclick="closeHowToAddModal()" class="text-slate-400 hover:text-slate-600 text-2xl font-bold px-2">&times;</button>
+      </div>
+      
+      <p class="text-xs text-slate-600 mb-3 leading-relaxed">
+        This app dynamically loads books directly from your project folders on the server. To add <strong>Book 2</strong>, <strong>Book 3</strong>, or more, follow these 3 simple steps:
+      </p>
+
+      <div class="space-y-3 text-xs bg-slate-50 p-4 rounded-2xl border border-slate-200 font-mono">
+        <div>
+          <strong class="text-indigo-600 font-sans block mb-1">Step 1: Create folders on server</strong>
+          <code>book/2/context/chapter1.js ... chapter16.js</code><br>
+          <code>book/2/quiz/quiz1.js ... quiz16.js</code>
+        </div>
+        <div>
+          <strong class="text-indigo-600 font-sans block mb-1">Step 2: Register in book/books.json</strong>
+          <pre class="bg-white p-2 rounded-xl border border-slate-200 overflow-x-auto text-[11px]">{
+  "id": "2",
+  "title": "Monsters and Mold",
+  "series": "Book 2",
+  "emoji": "🍄",
+  "totalChapters": 16
+}</pre>
+        </div>
+        <div>
+          <strong class="text-indigo-600 font-sans block mb-1">Step 3: Deploy to Netlify</strong>
+          <span class="font-sans text-slate-500">Push to Git or upload to Netlify. The new book will automatically appear in the Book dropdown!</span>
+        </div>
+      </div>
+
+      <div class="flex justify-end pt-5">
+        <button onclick="closeHowToAddModal()" class="bg-amber-500 hover:bg-amber-600 text-white font-bold px-6 py-2.5 rounded-xl shadow-sm text-sm">
+          Got it!
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Vocabulary Modal -->
+  <div id="vocabModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center hidden p-4 z-50">
+    <div class="bg-white max-w-sm w-full p-8 rounded-3xl shadow-2xl border-2 border-amber-300 text-center relative overflow-hidden">
+      <div class="absolute top-0 left-0 w-full h-2 bg-amber-400"></div>
+      <div class="text-5xl mb-3 mt-2" id="vEmoji">🔍</div>
+      <h4 id="vWord" class="text-3xl font-bold text-slate-800 mb-1">Word</h4>
+      <p id="vPhonetic" class="text-sm text-amber-600 font-mono mb-4">/phonetic/</p>
+      <div class="bg-amber-50 p-4 rounded-2xl border border-amber-200 mb-6">
+        <p id="vMeaning" class="text-lg font-bold text-slate-700">Definition</p>
+      </div>
+      <div class="flex space-x-3">
+        <button id="btnModalListen" onclick="speakWord(currentWord)" class="flex-1 bg-amber-500 text-white font-bold py-3 rounded-xl hover:bg-amber-600 transition-colors flex items-center justify-center space-x-2">
+          <span id="modalAudioIcon">🔊</span>
+          <span>Listen</span>
+        </button>
+        <button onclick="closeVocabModal()" class="flex-1 bg-slate-100 text-slate-600 font-bold py-3 rounded-xl hover:bg-slate-200 transition-colors">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Audio Player & Diagnostic Banner -->
+  <audio id="speechifyAudioPlayer" playsinline preload="auto" class="hidden"></audio>
+
+  <div id="ttsErrorBanner" class="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 max-w-md bg-rose-600 text-white p-4 rounded-2xl shadow-xl z-50 text-sm hidden transition-all">
+    <div class="flex items-start justify-between gap-2">
+      <div>
+        <p class="font-bold mb-1">⚠️ Speechify 語音連線提示</p>
+        <p id="ttsErrorMessage" class="text-xs text-rose-100 leading-relaxed"></p>
+      </div>
+      <button onclick="dismissTtsBanner()" class="text-white hover:text-rose-200 text-lg font-bold px-2 py-0.5">✕</button>
+    </div>
+  </div>
 
   <script>
-    const weeklyHomeworkStore = {};
-
-    let activeWeekId = null;
-    let modalSelectedWeekId = null;
-    let currentMainTab = 'explorer';
-    let currentWordIndex = 0;
-    let currentRate = 1.0;
-    let currentVoiceId = 'geffen_32';
-
-    // Speechify Audio Caching & Playback state
-    const speechifyAudioCache = {};
-    let globalUnlockedAudio = null;
-    let activeAudioSourceNode = null;
-
-    // Dictation state variables
-    let dictationWaitInterval = 15;
-    let isDictationRunning = false;
-    let isDictationPaused = false;
-    let dictationCurrentWordIdx = 0;
-    let dictationTimerId = null;
-    let dictationCountdownRemaining = 15;
-    let wakeLockSentinel = null;
-    let currentWordData = null;
-
-    // Listen All 10 Words State
-    let isPlayingAllWords = false;
-    let listenAllTimer = null;
-    let listenAllIndex = 0;
-
-    // Global Web Audio Context (The gold standard for iOS / iPad Safari sequential playback)
-    let audioCtx = null;
-    function getAudioContext() {
-      if (!audioCtx) {
-        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-        if (AudioContextClass) {
-          audioCtx = new AudioContextClass();
-        }
+    // Server-Side Books Registry
+    let serverBooks = [
+      {
+        id: "1",
+        title: "Dragons and Marshmallows",
+        series: "Book 1",
+        emoji: "🐉",
+        totalChapters: 16
+      },
+      {
+        id: "2",
+        title: "Monsters and Mold",
+        series: "Book 2",
+        emoji: "🍄",
+        totalChapters: 16
       }
-      if (audioCtx && audioCtx.state === 'suspended') {
-        audioCtx.resume();
+    ];
+
+    let currentBookId = "1";
+    let currentChapterIndex = 0; 
+    
+    // By default, toggle translations is OFF
+    let showAllZh = false;
+    
+    let score = 0;
+    let currentWord = "";
+    
+    // User adjustable font size (in pixels)
+    let currentFontSize = 20;
+    const MIN_FONT_SIZE = 14;
+    const MAX_FONT_SIZE = 34;
+
+    let puzzleStep = 0;
+    let selectedBlocks = [];
+    
+    let currentQuizIndex = 0;
+    let currentQuizQuestions = [];
+    let selectedQuizOption = null;
+
+    let currentFitbIndex = 0;
+    let currentFitbQuestions = [];
+    let selectedFitbOption = null;
+    
+    // Reward points trackers keyed by bookId: { "1": { "0": 60 } }
+    let quizRewarded = {}; 
+    let fitbRewarded = {}; 
+    
+    // Per-book & chapter persistence state: { [bookId]: { [chIdx]: { ... } } }
+    let chaptersState = {};
+
+    let currentlyPlayingIndex = -1;
+    let syncAnimFrameId = null;
+
+    // Cache stores: { audio_data: string, speech_marks: object }
+    const audioCache = new Map();
+
+    function showTtsError(msg) {
+      const banner = document.getElementById('ttsErrorBanner');
+      const textEl = document.getElementById('ttsErrorMessage');
+      if (banner && textEl) {
+        textEl.textContent = msg;
+        banner.classList.remove('hidden');
       }
-      return audioCtx;
     }
 
-    // Unlocks both Web Audio Context AND HTML5 Audio Element during initial user gesture
-    function unlockAudioForIos() {
+    function dismissTtsBanner() {
+      const banner = document.getElementById('ttsErrorBanner');
+      if (banner) banner.classList.add('hidden');
+    }
+
+    function openHowToAddModal() {
+      document.getElementById('howToAddModal').classList.remove('hidden');
+    }
+
+    function closeHowToAddModal() {
+      document.getElementById('howToAddModal').classList.add('hidden');
+    }
+
+    // Helper: Access currently active book configuration
+    function getCurrentBookConfig() {
+      return serverBooks.find(b => String(b.id) === String(currentBookId)) || serverBooks[0];
+    }
+
+    // Helper: Get or initialize persistent state for a book & chapter
+    function getChapterState(bId, chIdx) {
+      if (!chaptersState[bId]) {
+        chaptersState[bId] = {};
+      }
+      if (!chaptersState[bId][chIdx]) {
+        chaptersState[bId][chIdx] = {
+          puzzleStep: 0,
+          quiz: {
+            currentIndex: 0,
+            isCompleted: false
+          },
+          fitb: {
+            questions: null,
+            currentIndex: 0,
+            isCompleted: false
+          }
+        };
+      }
+      return chaptersState[bId][chIdx];
+    }
+
+    // Load state from localStorage
+    function loadFromLocalStorage() {
       try {
-        const ctx = getAudioContext();
-        if (ctx) {
-          const buffer = ctx.createBuffer(1, 1, 22050);
-          const source = ctx.createBufferSource();
-          source.buffer = buffer;
-          source.connect(ctx.destination);
-          source.start(0);
+        const savedData = localStorage.getItem('zoeySassafrasServerBooks_v1');
+        if (savedData) {
+          const parsedData = JSON.parse(savedData);
+          score = parsedData.score || 0;
+          currentBookId = parsedData.currentBookId || "1";
+          currentChapterIndex = parsedData.currentChapterIndex || 0;
+          quizRewarded = parsedData.quizRewarded || {};
+          fitbRewarded = parsedData.fitbRewarded || {};
+          chaptersState = parsedData.chaptersState || {};
+          if (parsedData.fontSize) {
+            currentFontSize = parsedData.fontSize;
+          }
+          document.getElementById('score').textContent = score;
         }
-        if (!globalUnlockedAudio) {
-          globalUnlockedAudio = new Audio();
-          globalUnlockedAudio.src = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=';
-          globalUnlockedAudio.play().catch(() => {});
+        updateSaveStatus(true);
+      } catch (error) {
+        console.error("Failed to load progress from localStorage:", error);
+        updateSaveStatus(false, true);
+      }
+      updateFontSizeUI();
+      updateToggleTranslationsButtonUI();
+    }
+
+    // Save state to localStorage
+    function saveToLocalStorage() {
+      try {
+        const saveData = {
+          score: score,
+          currentBookId: currentBookId,
+          currentChapterIndex: currentChapterIndex,
+          quizRewarded: quizRewarded,
+          fitbRewarded: fitbRewarded,
+          chaptersState: chaptersState,
+          fontSize: currentFontSize
+        };
+        localStorage.setItem('zoeySassafrasServerBooks_v1', JSON.stringify(saveData));
+        
+        const statusBox = document.getElementById('saveStatusContainer');
+        statusBox.classList.add('bg-emerald-100', 'border-emerald-300');
+        setTimeout(() => {
+          statusBox.classList.remove('bg-emerald-100', 'border-emerald-300');
+        }, 800);
+      } catch (error) {
+        console.error("Auto-save to localStorage failed", error);
+        updateSaveStatus(false, true);
+      }
+    }
+
+    function updateSaveStatus(isSuccess, isError = false) {
+      const statusText = document.getElementById('saveStatus');
+      const statusBox = document.getElementById('saveStatusContainer');
+      
+      if (isError) {
+        statusText.textContent = "❌ Save Error";
+        statusText.className = "text-xs font-bold text-rose-600";
+        statusBox.className = "flex items-center bg-rose-50 px-3 py-2 rounded-xl border border-rose-200 transition-colors";
+      } else {
+        statusText.textContent = "💾 Progress Saved";
+        statusText.className = "text-xs font-bold text-emerald-600";
+        statusBox.className = "flex items-center bg-emerald-50 px-3 py-2 rounded-xl border border-emerald-200 transition-colors";
+      }
+    }
+
+    function addScore(points) {
+      score += points;
+      document.getElementById('score').textContent = score;
+      saveToLocalStorage(); 
+    }
+
+    // Fetch server books registry file (book/books.json)
+    async function fetchServerBooksRegistry() {
+      try {
+        const res = await fetch('book/books.json');
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data) && data.length > 0) {
+            serverBooks = data;
+          }
         }
       } catch (e) {
-        console.warn('Audio unlock warning:', e);
+        console.log("Using built-in server books registry manifest:", e.message);
       }
+      populateBookDropdown();
     }
 
-    function setAudioRate(rate) {
-      currentRate = rate;
-      const btnSlow = document.getElementById('btnRateSlow');
-      const btnNormal = document.getElementById('btnRateNormal');
-      if (rate === 0.8) {
-        btnSlow.className = 'px-2.5 py-1 rounded-lg bg-brand-500 text-white font-bold transition-colors';
-        btnNormal.className = 'px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 font-medium transition-colors';
-      } else {
-        btnNormal.className = 'px-2.5 py-1 rounded-lg bg-brand-500 text-white font-bold transition-colors';
-        btnSlow.className = 'px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 font-medium transition-colors';
-      }
-    }
+    function populateBookDropdown() {
+      const select = document.getElementById('selectBook');
+      select.innerHTML = '';
 
-    // Listen All 10 Words Engine
-    function toggleListenAllWords() {
-      unlockAudioForIos();
-      if (isPlayingAllWords) {
-        stopListenAllWords();
-      } else {
-        startListenAllWords();
-      }
-    }
-
-    function startListenAllWords() {
-      const words = weeklyHomeworkStore[activeWeekId]?.words;
-      if (!words || words.length === 0) {
-        showNotification('No words available to play', '⚠️');
-        return;
-      }
-
-      isPlayingAllWords = true;
-      listenAllIndex = 0;
-      updateListenAllButtonState(true);
-      showNotification('Playing all 10 words (3s pause)...', '🎧');
-      playNextInListenAll();
-    }
-
-    function stopListenAllWords() {
-      isPlayingAllWords = false;
-      if (listenAllTimer) {
-        clearTimeout(listenAllTimer);
-        listenAllTimer = null;
-      }
-      stopCurrentAudio();
-      updateListenAllButtonState(false);
-    }
-
-    function updateListenAllButtonState(isPlaying) {
-      const btn = document.getElementById('btnListenAll');
-      const icon = document.getElementById('listenAllIcon');
-      const text = document.getElementById('listenAllText');
-      if (!btn || !icon || !text) return;
-
-      if (isPlaying) {
-        const total = weeklyHomeworkStore[activeWeekId]?.words?.length || 10;
-        icon.textContent = '⏹️';
-        text.textContent = `Stop (${listenAllIndex + 1}/${total})`;
-        btn.classList.add('bg-rose-500/80', 'ring-2', 'ring-white');
-        btn.classList.remove('bg-white/20');
-      } else {
-        icon.textContent = '🎧';
-        text.textContent = 'Listen All 10 Words';
-        btn.classList.remove('bg-rose-500/80', 'ring-2', 'ring-white');
-        btn.classList.add('bg-white/20');
-      }
-    }
-
-    function playNextInListenAll() {
-      if (!isPlayingAllWords) return;
-      const words = weeklyHomeworkStore[activeWeekId]?.words;
-      if (!words || listenAllIndex >= words.length) {
-        stopListenAllWords();
-        showNotification('Finished all 10 words!', '🎉');
-        return;
-      }
-
-      selectWord(listenAllIndex);
-      updateListenAllButtonState(true);
-
-      const wordObj = words[listenAllIndex];
-      speakText(wordObj.word, () => {
-        if (!isPlayingAllWords) return;
-        listenAllIndex++;
-        if (listenAllIndex < words.length) {
-          listenAllTimer = setTimeout(() => {
-            playNextInListenAll();
-          }, 3000);
-        } else {
-          stopListenAllWords();
-          showNotification('Finished all 10 words!', '🎉');
+      serverBooks.forEach(book => {
+        const opt = document.createElement('option');
+        opt.value = String(book.id);
+        opt.textContent = `${book.emoji || '📖'} ${book.series || 'Book ' + book.id}: ${book.title}`;
+        if (String(book.id) === String(currentBookId)) {
+          opt.selected = true;
         }
-      });
-    }
-
-    function showNotification(message, icon = '✨') {
-      const toast = document.getElementById('toastNotification');
-      document.getElementById('toastText').textContent = message;
-      document.getElementById('toastIcon').textContent = icon;
-      toast.classList.remove('translate-y-24', 'opacity-0');
-      toast.classList.add('translate-y-0', 'opacity-100');
-      setTimeout(() => {
-        toast.classList.add('translate-y-24', 'opacity-0');
-        toast.classList.remove('translate-y-0', 'opacity-100');
-      }, 3000);
-    }
-
-    function playBeep(frequency = 587.33, duration = 0.15) {
-      try {
-        const ctx = getAudioContext();
-        if (!ctx) return;
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(frequency, ctx.currentTime);
-        gain.gain.setValueAtTime(0.12, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.start();
-        osc.stop(ctx.currentTime + duration);
-      } catch (err) {}
-    }
-
-    window.onWeekRegistered = function(pageKey) {
-      weeklyHomeworkStore[pageKey] = window.SPELLQUEST_PAGES[pageKey];
-      
-      const hash = window.location.hash.replace('#', '');
-      if (!activeWeekId || hash === pageKey) {
-        activeWeekId = pageKey;
-      }
-      
-      document.getElementById('noDataState').classList.add('hidden');
-      document.getElementById('tabExplorerView').classList.remove('hidden');
-      
-      renderWeekPills();
-      selectWeekSession(activeWeekId);
-    };
-
-    function renderWeekPills() {
-      const container = document.getElementById('weekPillsContainer');
-      const weekKeys = Object.keys(weeklyHomeworkStore);
-
-      if (weekKeys.length === 0) {
-        container.innerHTML = '<span class="text-slate-400 italic text-xs py-1">No files in data/ yet</span>';
-        document.getElementById('noDataState').classList.remove('hidden');
-        document.getElementById('tabExplorerView').classList.add('hidden');
-        document.getElementById('tabDictationView').classList.add('hidden');
-        return;
-      }
-
-      container.innerHTML = '';
-      weekKeys.forEach(weekKey => {
-        const week = weeklyHomeworkStore[weekKey];
-        const displayName = week.pageName || weekKey;
-        const btn = document.createElement('button');
-        const isActive = (weekKey === activeWeekId);
-        btn.className = `px-3.5 py-1.5 rounded-xl text-xs font-bold font-mono transition-all flex items-center space-x-1.5 ${
-          isActive 
-            ? 'bg-brand-600 text-white shadow-md shadow-brand-500/25 ring-2 ring-brand-300' 
-            : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-        }`;
-        btn.innerHTML = `<span>📄</span><span>${displayName}</span>`;
-        btn.onclick = () => selectWeekSession(weekKey);
-        container.appendChild(btn);
+        select.appendChild(opt);
       });
 
-      const activeWeek = weeklyHomeworkStore[activeWeekId];
-      if (activeWeek) {
-        document.getElementById('headerWeekLabel').textContent = `data/${activeWeek.fileName || `${activeWeekId}.js`}`;
-        document.getElementById('bannerWeekTitle').textContent = `${activeWeek.title || activeWeek.pageName || activeWeekId} Spelling Quest`;
+      updateHeaderBookInfo();
+    }
 
-        const rawName = activeWeek.pageName || activeWeek.title || activeWeekId;
-        const formattedWeekName = rawName.replace(/^week/i, 'Week');
-        const dictationTitleEl = document.getElementById('dictationHeaderTitle');
-        if (dictationTitleEl) {
-          dictationTitleEl.textContent = `${formattedWeekName} Paper Dictation Test 🎙️`;
-        }
+    function updateHeaderBookInfo() {
+      const book = getCurrentBookConfig();
+      document.getElementById('headerBookEmoji').textContent = book.emoji || '📖';
+      document.getElementById('badgeCurrentBookTag').textContent = book.series || `Book ${book.id}`;
+    }
 
-        window.location.hash = activeWeekId;
+    // Dynamic Script Loader: Loads JS files from server side (book/{id}/context/ & quiz/)
+    async function loadBookScriptsFromServer(bId) {
+      stopAudioPlayback();
+      const book = getCurrentBookConfig();
+      const totalChapters = book.totalChapters || 16;
+
+      // Show loading indicator in UI
+      const banner = document.getElementById('bookLoadingBanner');
+      if (banner) banner.classList.remove('hidden');
+
+      // Clear existing loaded data
+      window.chaptersData = [];
+      window.quizzesData = {};
+
+      // Remove previous dynamic script tags
+      document.querySelectorAll('script[data-dynamic-book-script]').forEach(el => el.remove());
+
+      // Generate load promises for all chapter contexts and quizzes
+      const scriptPromises = [];
+      for (let i = 1; i <= totalChapters; i++) {
+        scriptPromises.push(injectScriptTag(`book/${bId}/context/chapter${i}.js`));
+        scriptPromises.push(injectScriptTag(`book/${bId}/quiz/quiz${i}.js`));
       }
-    }
 
-    function selectWeekSession(weekKey) {
-      if (!weeklyHomeworkStore[weekKey]) return;
+      // Wait for all scripts to load from server
+      await Promise.allSettled(scriptPromises);
 
-      stopListenAllWords();
-
-      if (isDictationRunning) {
-        clearInterval(dictationTimerId);
-        stopCurrentAudio();
-        isDictationRunning = false;
-        isDictationPaused = false;
-        releaseWakeLock();
+      // Sort chaptersData chronologically by chapterId in case network returned out of order
+      if (Array.isArray(window.chaptersData)) {
+        window.chaptersData.sort((a, b) => (Number(a.chapterId) || 0) - (Number(b.chapterId) || 0));
       }
 
-      activeWeekId = weekKey;
-      modalSelectedWeekId = weekKey;
-      currentWordIndex = 0;
-      currentWordData = weeklyHomeworkStore[activeWeekId].words ? weeklyHomeworkStore[activeWeekId].words[0] : null;
-      
-      document.getElementById('noDataState').classList.add('hidden');
-      
-      renderWeekPills();
-      initWordList();
-      resetDictationStage();
-      updateDataModalCode();
-      switchMainTab(currentMainTab);
+      if (banner) banner.classList.add('hidden');
 
-      // Pre-cache all 10 words of the current week in the background for instant zero-latency speech
-      preloadActiveWeekAudio();
+      // Ensure currentChapterIndex is within bounds
+      if (currentChapterIndex >= window.chaptersData.length) {
+        currentChapterIndex = 0;
+      }
+
+      renderChapterList();
+      loadChapter(currentChapterIndex);
     }
 
-    // Background pre-loader for 10 weekly words
-    function preloadActiveWeekAudio() {
-      const words = weeklyHomeworkStore[activeWeekId]?.words;
-      if (!words || words.length === 0) return;
-
-      words.forEach(w => {
-        const cacheKey = `${w.word.trim()}_${currentVoiceId}`;
-        if (!speechifyAudioCache[cacheKey]) {
-          fetch('/.netlify/functions/tts', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              text: w.word,
-              voice_id: currentVoiceId
-            })
-          })
-          .then(res => res.ok ? res.json() : null)
-          .then(data => {
-            if (data && data.audio_data) {
-              speechifyAudioCache[cacheKey] = data.audio_data;
-            }
-          })
-          .catch(() => {});
-        }
-      });
-    }
-
-    function loadWeekScript(fileName) {
-      return new Promise((resolve, reject) => {
+    function injectScriptTag(src) {
+      return new Promise((resolve) => {
         const script = document.createElement('script');
-        script.src = `data/${fileName}`;
-        script.onload = () => resolve(fileName);
+        script.src = src;
+        script.charset = 'UTF-8';
+        script.setAttribute('data-dynamic-book-script', 'true');
+        script.onload = () => resolve({ src, status: 'loaded' });
         script.onerror = () => {
-          script.remove();
-          reject(new Error(`Not found: ${fileName}`));
+          console.warn(`Server script not found or failed to load: ${src}`);
+          resolve({ src, status: 'error' });
         };
         document.head.appendChild(script);
       });
     }
 
-    function probeDataFolder() {
-      const savedWeeks = JSON.parse(localStorage.getItem('spellquest_active_weeks') || '[]');
-      const initialWeeks = Array.from(new Set(['week2A', 'week2B', 'week3A', 'week3B', ...savedWeeks]));
-
-      initialWeeks.forEach(weekName => {
-        const fileName = weekName.endsWith('.js') ? weekName : `${weekName}.js`;
-        loadWeekScript(fileName).then(() => {
-          rememberWeek(weekName.replace(/\.js$/i, ''));
-        }).catch(() => {});
-      });
-
-      setTimeout(() => {
-        if (Object.keys(weeklyHomeworkStore).length === 0) {
-          renderWeekPills();
-        }
-      }, 500);
+    async function switchBook(newBookId) {
+      currentBookId = String(newBookId);
+      currentChapterIndex = 0;
+      updateHeaderBookInfo();
+      saveToLocalStorage();
+      await loadBookScriptsFromServer(currentBookId);
     }
 
-    function rememberWeek(weekName) {
-      try {
-        const savedWeeks = JSON.parse(localStorage.getItem('spellquest_active_weeks') || '[]');
-        if (!savedWeeks.includes(weekName)) {
-          savedWeeks.push(weekName);
-          localStorage.setItem('spellquest_active_weeks', JSON.stringify(savedWeeks));
-        }
-      } catch (e) {}
-    }
-
-    function loadCustomWeekFile() {
-      const input = document.getElementById('customJsInput');
-      let fileName = input.value.trim();
-      if (!fileName) return;
-
-      if (!fileName.endsWith('.js')) {
-        fileName += '.js';
+    function adjustFontSize(delta) {
+      const newSize = currentFontSize + delta;
+      if (newSize >= MIN_FONT_SIZE && newSize <= MAX_FONT_SIZE) {
+        currentFontSize = newSize;
+        applyFontSize();
+        updateFontSizeUI();
+        saveToLocalStorage();
       }
-
-      loadWeekScript(fileName)
-        .then(() => {
-          const weekKey = fileName.replace(/\.js$/i, '');
-          rememberWeek(weekKey);
-          input.value = '';
-          showNotification(`Loaded data/${fileName}`, '✅');
-        })
-        .catch(() => {
-          showNotification(`Could not find data/${fileName}`, '⚠️');
-        });
     }
 
-    function handleFileImport(event) {
-      const files = event.target.files;
-      if (!files || files.length === 0) return;
+    function updateFontSizeUI() {
+      const display = document.getElementById('fontSizeDisplay');
+      if (display) {
+        display.textContent = `${currentFontSize}px`;
+      }
+    }
 
-      Array.from(files).forEach(file => {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          try {
-            const jsContent = e.target.result;
-            const scriptFunction = new Function(jsContent);
-            scriptFunction();
-            showNotification(`Imported ${file.name}`, '📂');
-          } catch (err) {
-            console.error('File execution error:', err);
-            showNotification(`Failed parsing ${file.name}`, '❌');
-          }
-        };
-        reader.readAsText(file);
+    function applyFontSize() {
+      document.querySelectorAll('#sentencesContainer p[id^="sentence-en-"]').forEach(el => {
+        el.style.fontSize = `${currentFontSize}px`;
+        el.style.lineHeight = `${Math.round(currentFontSize * 1.55)}px`;
       });
-      event.target.value = '';
+      const zhSize = Math.max(13, Math.round(currentFontSize * 0.78));
+      document.querySelectorAll('#sentencesContainer .zh-text').forEach(el => {
+        el.style.fontSize = `${zhSize}px`;
+        el.style.lineHeight = `${Math.round(zhSize * 1.5)}px`;
+      });
     }
 
-    function initWordList() {
-      const container = document.getElementById('wordListContainer');
-      container.innerHTML = '';
-      if (!activeWeekId || !weeklyHomeworkStore[activeWeekId]) return;
+    function renderChapterList() {
+      const listContainer = document.getElementById('chapterList');
+      const book = getCurrentBookConfig();
+      const chapters = window.chaptersData || [];
 
-      const words = weeklyHomeworkStore[activeWeekId].words || [];
-      if (words.length === 0) {
-        container.innerHTML = '<p class="text-xs text-slate-400 p-3">No words found in this file.</p>';
+      listContainer.innerHTML = `
+        <div class="flex items-center justify-between mb-2 pl-2 pt-2 border-b border-amber-100 pb-2">
+          <span class="text-xs uppercase font-bold tracking-widest text-amber-600">Chapters</span>
+          <span class="text-xs bg-amber-100 text-amber-800 font-bold px-2 py-0.5 rounded-full">${chapters.length} Chs</span>
+        </div>
+      `;
+      
+      if (chapters.length === 0) {
+        listContainer.innerHTML += `
+          <div class="p-4 text-xs text-slate-500 leading-relaxed">
+            No chapter files found on server in <code>book/${book.id}/context/</code>.
+          </div>
+        `;
         return;
       }
 
-      words.forEach((item, index) => {
-        const row = document.createElement('button');
-        const isSelected = (index === currentWordIndex);
-        row.className = `w-full text-left px-3 py-1.5 rounded-xl flex items-center justify-between border transition-all ${
-          isSelected 
-            ? 'bg-brand-50 border-brand-300 text-brand-900 shadow-sm' 
-            : 'bg-white border-slate-100 hover:bg-slate-50 text-slate-700'
+      chapters.forEach((ch, index) => {
+        const btn = document.createElement('button');
+        const isActive = index === currentChapterIndex;
+        
+        btn.className = `w-full text-left px-4 py-3 rounded-2xl transition-all duration-200 flex flex-col ${
+          isActive ? 'bg-amber-100 border-2 border-amber-300 shadow-sm' : 'bg-transparent border-2 border-transparent hover:bg-slate-50 text-slate-500 hover:text-slate-700'
         }`;
-        row.onclick = () => selectWord(index);
+        
+        btn.onclick = () => loadChapter(index);
+        
+        btn.innerHTML = `
+          <span class="text-xs font-bold ${isActive ? 'text-amber-600' : 'text-slate-400'}">Ch ${ch.chapterId || (index + 1)}</span>
+          <span class="text-sm font-bold truncate ${isActive ? 'text-amber-900' : ''}">${ch.titleEn}</span>
+        `;
+        listContainer.appendChild(btn);
+      });
+    }
+
+    function loadChapter(index) {
+      if (!window.chaptersData || window.chaptersData.length <= index) return;
+
+      stopAudioPlayback();
+      currentChapterIndex = index;
+      
+      // Load saved state for this specific book and chapter
+      const chState = getChapterState(currentBookId, currentChapterIndex);
+      puzzleStep = chState.puzzleStep || 0;
+      
+      const chapterObj = window.chaptersData[index];
+      document.getElementById('displayChapterNum').textContent = `Chapter ${chapterObj.chapterId || (index + 1)}`;
+      document.getElementById('displayChapterTitle').textContent = chapterObj.titleEn;
+
+      renderChapterList(); 
+      initReader();        
+      
+      if(!document.getElementById('gameView').classList.contains('hidden')) {
+        initPuzzle();      
+      }
+      if(!document.getElementById('quizView').classList.contains('hidden')) {
+        renderQuiz();      
+      }
+      if(!document.getElementById('fitbView').classList.contains('hidden')) {
+        renderFitb();      
+      }
+
+      saveToLocalStorage();
+    }
+
+    function buildSentenceHTML(text, vocab, index) {
+      const regex = /([a-zA-Z0-9_'-]+|[^a-zA-Z0-9_'-]+)/g; 
+      const tokens = text.match(regex);
+      let html = "";
+      let charOffset = 0;
+      
+      tokens.forEach(token => {
+        if (/^[a-zA-Z0-9_'-]+$/.test(token)) {
+          const cleanWord = token.toLowerCase();
+          const isVocab = vocab && (vocab[cleanWord] || vocab[token]);
+          const baseClass = "word-token transition-all duration-75 rounded px-0.5";
+          const start = charOffset;
+          const end = charOffset + token.length;
+          
+          if (isVocab) {
+            html += `<span class="${baseClass} vocab-badge bg-amber-200 text-amber-900 font-bold underline decoration-amber-400" data-start="${start}" data-end="${end}" onclick="showVocab('${token}', ${index})">${token}</span>`;
+          } else {
+            html += `<span class="${baseClass}" data-start="${start}" data-end="${end}">${token}</span>`;
+          }
+        } else {
+          html += token;
+        }
+        charOffset += token.length;
+      });
+      return html;
+    }
+
+    function initReader() {
+      const container = document.getElementById('sentencesContainer');
+      container.innerHTML = "";
+      
+      if (!window.chaptersData || window.chaptersData.length === 0) return;
+      const currentContent = window.chaptersData[currentChapterIndex].content || [];
+
+      currentContent.forEach((item, index) => {
+        const row = document.createElement('div');
+        row.id = `sentence-row-${index}`;
+        row.className = "p-4 md:p-5 rounded-2xl hover:bg-amber-50/60 transition-all border border-transparent hover:border-amber-200 mb-1";
+        
+        const processedEnHTML = buildSentenceHTML(item.en, item.vocab, index);
+
         row.innerHTML = `
-          <div class="flex items-center space-x-3">
-            <span class="w-7 h-7 rounded-lg ${isSelected ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-500'} flex items-center justify-center font-bold text-xs shrink-0">
-              ${index + 1}
-            </span>
-            <span class="font-bold text-[21px] font-kid tracking-wide leading-snug">${item.word}</span>
+          <div class="flex items-start justify-between gap-4">
+            <div class="flex-1 min-w-0">
+              <p id="sentence-en-${index}" class="story-text-en text-slate-800 font-medium">${processedEnHTML}</p>
+              <p class="zh-text story-text-zh text-slate-500 mt-2 font-normal ${showAllZh ? '' : 'hidden'}">${item.zh || ''}</p>
+            </div>
+            <div class="flex space-x-2 shrink-0">
+              <button id="btn-speak-${index}" onclick="speakSentence(${index})" class="p-3 bg-amber-100 hover:bg-amber-200 text-amber-800 rounded-xl text-lg transition-transform active:scale-95 shadow-sm min-w-[48px] flex items-center justify-center" title="Read Aloud with Victoria">
+                <span>🔊</span>
+              </button>
+              <button onclick="toggleRowZh(this)" class="p-3 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-lg transition-transform active:scale-95 shadow-sm" title="Show Translation">🌐</button>
+            </div>
           </div>
-          <span class="text-[10px] text-slate-400 font-mono shrink-0">${item.category || ''}</span>
         `;
         container.appendChild(row);
       });
 
-      renderDots();
-      updateWordCard();
+      applyFontSize();
+      updateToggleTranslationsButtonUI();
     }
 
-    function selectWord(index) {
-      currentWordIndex = index;
-      if (weeklyHomeworkStore[activeWeekId] && weeklyHomeworkStore[activeWeekId].words) {
-        currentWordData = weeklyHomeworkStore[activeWeekId].words[index];
+    function stopAudioPlayback() {
+      if (syncAnimFrameId) {
+        cancelAnimationFrame(syncAnimFrameId);
+        syncAnimFrameId = null;
       }
-      initWordList();
-    }
-
-    function updateWordCard() {
-      if (!currentWordData) return;
-      const w = currentWordData;
-      const totalWords = weeklyHomeworkStore[activeWeekId]?.words?.length || 10;
-      document.getElementById('currentWordNum').textContent = `Word ${currentWordIndex + 1} of ${totalWords}`;
-      document.getElementById('currentWordText').textContent = w.word;
-      document.getElementById('currentPhonetic').textContent = w.phonetic || '';
-      document.getElementById('currentCategoryTag').textContent = w.category || 'Vocabulary';
-      document.getElementById('currentMeaning').textContent = w.meaning;
-
-      const regex = new RegExp(`(${w.word})`, 'gi');
-      const highlightedExample = (w.example || '').replace(regex, `<span class="font-bold text-brand-700 underline underline-offset-4 decoration-2">$1</span>`);
-      document.getElementById('currentExample').innerHTML = highlightedExample;
-      document.getElementById('currentInquiryPrompt').textContent = w.inquiry || 'How can you use this word in a sentence?';
-    }
-
-    function renderDots() {
-      const dots = document.getElementById('dotsContainer');
-      dots.innerHTML = '';
-      const total = weeklyHomeworkStore[activeWeekId]?.words?.length || 0;
-      for (let i = 0; i < total; i++) {
-        const dot = document.createElement('span');
-        dot.className = `w-2 h-2 rounded-full transition-all ${i === currentWordIndex ? 'w-5 bg-brand-600' : 'bg-slate-200'}`;
-        dots.appendChild(dot);
-      }
-    }
-
-    function prevWord() {
-      const total = weeklyHomeworkStore[activeWeekId]?.words?.length || 0;
-      if (total === 0) return;
-      currentWordIndex = (currentWordIndex - 1 + total) % total;
-      selectWord(currentWordIndex);
-    }
-
-    function nextWord() {
-      const total = weeklyHomeworkStore[activeWeekId]?.words?.length || 0;
-      if (total === 0) return;
-      currentWordIndex = (currentWordIndex + 1) % total;
-      selectWord(currentWordIndex);
-    }
-
-    // Stop all active audio safely
-    function stopCurrentAudio() {
-      if (activeAudioSourceNode) {
-        try {
-          activeAudioSourceNode.stop();
-          activeAudioSourceNode.disconnect();
-        } catch (e) {}
-        activeAudioSourceNode = null;
-      }
-      if (globalUnlockedAudio) {
-        try {
-          globalUnlockedAudio.pause();
-          globalUnlockedAudio.currentTime = 0;
-        } catch (e) {}
-      }
-      if ('speechSynthesis' in window) {
-        try {
-          window.speechSynthesis.cancel();
-        } catch (e) {}
-      }
-    }
-
-    // Fallback: Web Speech Engine with Garbage Collection Guard and Watchdog Timer
-    window._activeUtterance = null;
-    function fallbackWebSpeech(text, callback) {
-      if (!('speechSynthesis' in window)) {
-        if (typeof callback === 'function') callback();
-        return;
+      const player = document.getElementById('speechifyAudioPlayer');
+      if (player) {
+        player.pause();
+        player.currentTime = 0;
       }
       window.speechSynthesis.cancel();
+      if (currentlyPlayingIndex !== -1) {
+        clearSentenceHighlight(currentlyPlayingIndex);
+        resetSentenceButton(currentlyPlayingIndex);
+        currentlyPlayingIndex = -1;
+      }
+      resetModalButton();
+    }
 
-      let finished = false;
-      const onDone = () => {
-        if (finished) return;
-        finished = true;
-        clearTimeout(watchdogTimer);
-        window._activeUtterance = null;
-        if (typeof callback === 'function') callback();
+    function clearSentenceHighlight(index) {
+      const row = document.getElementById(`sentence-row-${index}`);
+      if (row) {
+        row.classList.remove('sentence-playing');
+      }
+      clearWordHighlights(index);
+    }
+
+    function clearWordHighlights(index) {
+      if (index === -1) return;
+      document.querySelectorAll(`#sentence-en-${index} .word-token`).forEach(el => {
+        el.classList.remove('karaoke-highlight');
+      });
+    }
+
+    function resetSentenceButton(index) {
+      const btn = document.getElementById(`btn-speak-${index}`);
+      if (btn) {
+        btn.innerHTML = '<span>🔊</span>';
+      }
+    }
+
+    function resetModalButton() {
+      const icon = document.getElementById('modalAudioIcon');
+      if (icon) icon.textContent = '🔊';
+    }
+
+    // Word sync loop with Speechify speech marks
+    function startWordSyncLoop(index, speechMarks) {
+      const player = document.getElementById('speechifyAudioPlayer');
+      const chunks = (speechMarks && speechMarks.chunks) ? speechMarks.chunks : [];
+      const wordElements = Array.from(document.querySelectorAll(`#sentence-en-${index} .word-token`));
+
+      if (chunks.length === 0 || wordElements.length === 0) return;
+
+      let lastActiveIndex = -1;
+
+      function update() {
+        if (player.paused || player.ended || currentlyPlayingIndex !== index) {
+          clearWordHighlights(index);
+          return;
+        }
+
+        const currentMs = player.currentTime * 1000;
+
+        let activeChunk = null;
+        for (let i = 0; i < chunks.length; i++) {
+          const chunk = chunks[i];
+          if (currentMs >= chunk.start_time && currentMs <= chunk.end_time) {
+            activeChunk = chunk;
+            break;
+          }
+        }
+
+        if (activeChunk) {
+          let matchedIndex = -1;
+          for (let i = 0; i < wordElements.length; i++) {
+            const start = parseInt(wordElements[i].getAttribute('data-start'));
+            const end = parseInt(wordElements[i].getAttribute('data-end'));
+            if (activeChunk.start !== undefined && activeChunk.end !== undefined) {
+              if (start <= activeChunk.start && end >= activeChunk.end) {
+                matchedIndex = i;
+                break;
+              }
+              if (Math.abs(start - activeChunk.start) <= 1) {
+                matchedIndex = i;
+                break;
+              }
+            }
+          }
+
+          if (matchedIndex !== -1 && matchedIndex !== lastActiveIndex) {
+            clearWordHighlights(index);
+            wordElements[matchedIndex].classList.add('karaoke-highlight');
+            lastActiveIndex = matchedIndex;
+          }
+        }
+
+        syncAnimFrameId = requestAnimationFrame(update);
+      }
+
+      syncAnimFrameId = requestAnimationFrame(update);
+    }
+
+    async function playSpeechifyText(text, index = -1, isWord = false) {
+      stopAudioPlayback();
+
+      const btn = !isWord ? document.getElementById(`btn-speak-${index}`) : null;
+      const modalIcon = isWord ? document.getElementById('modalAudioIcon') : null;
+
+      if (btn) {
+        btn.innerHTML = '<span class="inline-block w-5 h-5 border-2 border-amber-600 border-t-transparent rounded-full animate-spin"></span>';
+      }
+      if (modalIcon) {
+        modalIcon.innerHTML = '<span class="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>';
+      }
+
+      let cached = audioCache.get(text);
+
+      if (!cached) {
+        try {
+          const response = await fetch('/.netlify/functions/speak', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text: text })
+          });
+
+          const result = await response.json().catch(() => ({}));
+
+          if (!response.ok) {
+            const errDetail = result.error || `HTTP ${response.status}`;
+            throw new Error(errDetail);
+          }
+
+          if (result.audio_data) {
+            cached = {
+              audio_data: result.audio_data,
+              speech_marks: result.speech_marks || null
+            };
+            audioCache.set(text, cached);
+          } else {
+            throw new Error("Missing audio_data in Speechify response.");
+          }
+        } catch (error) {
+          console.warn("Speechify Netlify Function failed:", error.message);
+          if (btn) resetSentenceButton(index);
+          if (modalIcon) resetModalButton();
+          
+          showTtsError(`無法取得 Speechify 語音 (${error.message})，暫時切換為本地發音。`);
+          fallbackBrowserSpeak(text, index, isWord);
+          return;
+        }
+      }
+
+      const player = document.getElementById('speechifyAudioPlayer');
+      player.src = `data:audio/mp3;base64,${cached.audio_data}`;
+
+      if (!isWord && index !== -1) {
+        currentlyPlayingIndex = index;
+        const row = document.getElementById(`sentence-row-${index}`);
+        if (row) row.classList.add('sentence-playing');
+      }
+
+      player.onplay = () => {
+        if (!isWord && index !== -1 && cached.speech_marks) {
+          startWordSyncLoop(index, cached.speech_marks);
+        }
       };
 
-      // Watchdog timer: on iOS Safari, if speechSynthesis.speak is dropped due to lack of user gesture,
-      // this timer fires automatically so the sequence never gets stuck!
-      const estimatedDuration = Math.max(1200, text.length * 110);
-      const watchdogTimer = setTimeout(onDone, estimatedDuration);
+      player.onended = () => {
+        if (!isWord && index !== -1) {
+          clearSentenceHighlight(index);
+          resetSentenceButton(index);
+          currentlyPlayingIndex = -1;
+        }
+        if (isWord) resetModalButton();
+      };
 
+      player.onerror = () => {
+        if (!isWord && index !== -1) {
+          clearSentenceHighlight(index);
+          resetSentenceButton(index);
+          currentlyPlayingIndex = -1;
+        }
+        if (isWord) resetModalButton();
+      };
+
+      try {
+        await player.play();
+        if (btn) btn.innerHTML = '<span>🔊</span>';
+        if (modalIcon) modalIcon.textContent = '🔊';
+      } catch (playErr) {
+        console.warn("Audio autoplay blocked by iOS Safari:", playErr);
+        if (btn) resetSentenceButton(index);
+        if (modalIcon) resetModalButton();
+      }
+    }
+
+    function fallbackBrowserSpeak(text, index = -1, isWord = false) {
+      window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(text);
-      utterance.rate = currentRate;
-      utterance.lang = currentVoiceId.includes('beatrice') || currentVoiceId.includes('hugh') || currentVoiceId.includes('george') ? 'en-GB' : 'en-US';
+      utterance.lang = 'en-US';
+      utterance.rate = 0.85;
 
-      const voices = window.speechSynthesis.getVoices();
-      const voice = voices.find(v => v.lang === utterance.lang) || voices.find(v => v.lang.startsWith('en'));
-      if (voice) utterance.voice = voice;
+      if (!isWord && index !== -1) {
+        currentlyPlayingIndex = index;
+        const row = document.getElementById(`sentence-row-${index}`);
+        if (row) row.classList.add('sentence-playing');
 
-      utterance.onend = onDone;
-      utterance.onerror = onDone;
+        utterance.onboundary = function(event) {
+          if (event.charIndex === undefined) return;
+          clearWordHighlights(index); 
+          const spans = document.querySelectorAll(`#sentence-en-${index} .word-token`);
+          for (let span of spans) {
+            const start = parseInt(span.getAttribute('data-start'));
+            const end = parseInt(span.getAttribute('data-end'));
+            if (event.charIndex >= start && event.charIndex < end) {
+              span.classList.add('karaoke-highlight');
+              break; 
+            }
+          }
+        };
 
-      // Keep utterance in global scope to prevent V8 GC bug
-      window._activeUtterance = utterance;
+        utterance.onend = () => {
+          clearSentenceHighlight(index);
+          currentlyPlayingIndex = -1;
+        };
+        utterance.onerror = () => {
+          clearSentenceHighlight(index);
+          currentlyPlayingIndex = -1;
+        };
+      }
+
       window.speechSynthesis.speak(utterance);
     }
 
-    // High-performance Base64 to ArrayBuffer decoder
-    function base64ToArrayBuffer(base64) {
-      const binaryString = window.atob(base64);
-      const len = binaryString.length;
-      const bytes = new Uint8Array(len);
-      for (let i = 0; i < len; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
-      }
-      return bytes.buffer;
+    function speakSentence(index) {
+      if (!window.chaptersData || !window.chaptersData[currentChapterIndex]) return;
+      const currentContent = window.chaptersData[currentChapterIndex].content;
+      const text = currentContent[index].en;
+      playSpeechifyText(text, index, false);
     }
 
-    // Main Speech Engine: Web Audio API (iOS / Safari Compatible & Anti-freeze)
-    function speakText(text, callback) {
-      if (!text) {
-        if (typeof callback === 'function') callback();
+    function speakWord(word) {
+      if (!word) return;
+      playSpeechifyText(word, -1, true);
+    }
+
+    function toggleRowZh(btn) {
+      const p = btn.closest('.p-4, .p-5').querySelector('.zh-text');
+      p.classList.toggle('hidden');
+    }
+
+    function updateToggleTranslationsButtonUI() {
+      const btn = document.getElementById('btnToggleAllZh');
+      if (btn) {
+        btn.textContent = showAllZh ? 'Hide Translations' : 'Show Translations';
+      }
+    }
+
+    function toggleAllTranslations() {
+      showAllZh = !showAllZh;
+      document.querySelectorAll('.zh-text').forEach(el => {
+        if (showAllZh) el.classList.remove('hidden');
+        else el.classList.add('hidden');
+      });
+      updateToggleTranslationsButtonUI();
+    }
+
+    function showVocab(wordKey, index) {
+      if (!window.chaptersData || !window.chaptersData[currentChapterIndex]) return;
+      const currentContent = window.chaptersData[currentChapterIndex].content;
+      const cleanWord = wordKey.toLowerCase();
+      const v = currentContent[index].vocab[cleanWord] || currentContent[index].vocab[wordKey];
+      if (!v) return;
+
+      currentWord = wordKey;
+      document.getElementById('vWord').textContent = wordKey;
+      document.getElementById('vPhonetic').textContent = v.phonetic || "";
+      document.getElementById('vMeaning').textContent = v.enMeaning || v.zh;
+      document.getElementById('vEmoji').textContent = v.emoji || "💡";
+      document.getElementById('vocabModal').classList.remove('hidden');
+      speakWord(wordKey);
+    }
+
+    function closeVocabModal() {
+      document.getElementById('vocabModal').classList.add('hidden');
+      stopAudioPlayback();
+    }
+
+    function initPuzzle() {
+      if (!window.chaptersData || !window.chaptersData[currentChapterIndex]) return;
+      const currentContent = window.chaptersData[currentChapterIndex].content || [];
+      const chState = getChapterState(currentBookId, currentChapterIndex);
+      puzzleStep = chState.puzzleStep || 0;
+
+      if(!currentContent[puzzleStep] || !currentContent[puzzleStep].puzzle) {
+        document.getElementById('dropZone').innerHTML = '<span class="text-slate-400">No puzzle available for this sentence.</span>';
+        document.getElementById('wordsBank').innerHTML = '';
         return;
       }
 
-      stopCurrentAudio();
-      unlockAudioForIos();
+      const currentPuzzle = currentContent[puzzleStep].puzzle;
+      const bank = document.getElementById('wordsBank');
+      const dropZone = document.getElementById('dropZone');
+      const feedback = document.getElementById('feedbackText');
 
-      const cacheKey = `${text.trim()}_${currentVoiceId}`;
+      selectedBlocks = [];
+      feedback.textContent = "";
+      dropZone.innerHTML = '<span id="dropPlaceholder" class="text-sm text-indigo-400">Click words below to place them here...</span>';
+      bank.innerHTML = "";
 
-      // Complete-once wrapper with watchdog protection
-      let isDone = false;
-      const finishExecution = () => {
-        if (isDone) return;
-        isDone = true;
-        clearTimeout(watchdogTimer);
-        if (typeof callback === 'function') callback();
-      };
+      const shuffled = [...currentPuzzle].sort(() => Math.random() - 0.5);
 
-      // Maximum watchdog safe limit (4.5s max per word announcement)
-      const watchdogTimer = setTimeout(() => {
-        console.warn('Speech watchdog triggered for:', text);
-        finishExecution();
-      }, 4500);
-
-      // Play audio data via Web Audio API or reusable HTML5 Audio
-      const playDecodedAudio = (base64Audio) => {
-        const ctx = getAudioContext();
-        if (ctx) {
-          try {
-            const arrayBuffer = base64ToArrayBuffer(base64Audio);
-            ctx.decodeAudioData(arrayBuffer.slice(0), (audioBuffer) => {
-              if (isDone) return;
-              const source = ctx.createBufferSource();
-              source.buffer = audioBuffer;
-              source.playbackRate.value = currentRate;
-              source.connect(ctx.destination);
-              activeAudioSourceNode = source;
-
-              source.onended = () => {
-                activeAudioSourceNode = null;
-                finishExecution();
-              };
-
-              source.start(0);
-              setVoiceStatus(true, 'Speechify AI Playing');
-            }, (decodeErr) => {
-              console.warn('Web Audio decode failed, trying HTML5 Audio fallback:', decodeErr);
-              playViaHtml5Audio(base64Audio);
-            });
-            return;
-          } catch (ctxErr) {
-            console.warn('Web Audio playback error:', ctxErr);
-          }
-        }
-        playViaHtml5Audio(base64Audio);
-      };
-
-      const playViaHtml5Audio = (base64Audio) => {
-        try {
-          if (!globalUnlockedAudio) {
-            globalUnlockedAudio = new Audio();
-          }
-          globalUnlockedAudio.src = `data:audio/mp3;base64,${base64Audio}`;
-          globalUnlockedAudio.playbackRate = currentRate;
-          globalUnlockedAudio.onended = () => {
-            finishExecution();
-          };
-          globalUnlockedAudio.onerror = () => {
-            setVoiceStatus(false, 'Audio playback failed, fallback to local');
-            fallbackWebSpeech(text, finishExecution);
-          };
-          globalUnlockedAudio.play().then(() => {
-            setVoiceStatus(true, 'Speechify AI Playing');
-          }).catch(() => {
-            setVoiceStatus(false, 'Autoplay blocked, using local');
-            fallbackWebSpeech(text, finishExecution);
-          });
-        } catch (err) {
-          setVoiceStatus(false, 'Audio error, fallback to local');
-          fallbackWebSpeech(text, finishExecution);
-        }
-      };
-
-      // 1. In-memory cache hit
-      if (speechifyAudioCache[cacheKey]) {
-        playDecodedAudio(speechifyAudioCache[cacheKey]);
-        return;
-      }
-
-      // 2. Fetch from Netlify Serverless Function
-      fetch('/.netlify/functions/tts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          text: text,
-          voice_id: currentVoiceId
-        })
-      })
-      .then(async res => {
-        if (!res.ok) {
-          const errJson = await res.json().catch(() => ({}));
-          const errMsg = errJson.error || `HTTP ${res.status}`;
-          throw new Error(errMsg);
-        }
-        return res.json();
-      })
-      .then(data => {
-        if (data && data.audio_data) {
-          speechifyAudioCache[cacheKey] = data.audio_data;
-          setVoiceStatus(true, 'Speechify AI Ready');
-          playDecodedAudio(data.audio_data);
-        } else {
-          throw new Error('No audio_data in response');
-        }
-      })
-      .catch(err => {
-        console.warn('[Speechify Proxy Error]:', err.message);
-        setVoiceStatus(false, `Using browser voice (${err.message})`);
-        fallbackWebSpeech(text, finishExecution);
-      });
-    }
-
-    function setVoiceStatus(isOnline, tooltipText) {
-      const dot = document.getElementById('voiceStatusDot');
-      if (!dot) return;
-      if (isOnline) {
-        dot.className = 'w-2 h-2 rounded-full bg-emerald-500 mr-1 animate-pulse';
-        dot.title = tooltipText || 'Speechify AI Connected';
-      } else {
-        dot.className = 'w-2 h-2 rounded-full bg-amber-500 mr-1';
-        dot.title = tooltipText || 'Using Browser Local Voice';
-      }
-    }
-
-    function speakCurrentWord() {
-      unlockAudioForIos();
-      if (currentWordData) {
-        speakText(currentWordData.word);
-      }
-    }
-
-    function updateVoiceSelection() {
-      const select = document.getElementById('voiceSelect');
-      if (select) {
-        currentVoiceId = select.value;
-      }
-      preloadActiveWeekAudio();
-      speakCurrentWord();
-    }
-
-    function updateIntervalSetting(val) {
-      dictationWaitInterval = parseInt(val, 10);
-      document.getElementById('timerSettingDisplay').textContent = `${dictationWaitInterval} seconds`;
-    }
-
-    async function requestWakeLock() {
-      try {
-        if ('wakeLock' in navigator) {
-          wakeLockSentinel = await navigator.wakeLock.request('screen');
-        }
-      } catch (err) {
-        console.warn('Wake Lock request:', err);
-      }
-    }
-
-    function releaseWakeLock() {
-      if (wakeLockSentinel !== null) {
-        wakeLockSentinel.release().then(() => {
-          wakeLockSentinel = null;
-        }).catch(() => {});
-      }
-    }
-
-    // Paper Dictation Engine
-    function startDictationSession() {
-      unlockAudioForIos();
-      isDictationRunning = true;
-      isDictationPaused = false;
-      dictationCurrentWordIdx = 0;
-      requestWakeLock();
-
-      document.getElementById('dictationStageIdle').classList.add('hidden');
-      document.getElementById('dictationStageComplete').classList.add('hidden');
-      document.getElementById('dictationStageActive').classList.remove('hidden');
-
-      playDictationWordSequence();
-    }
-
-    function playDictationWordSequence() {
-      if (!isDictationRunning) return;
-      const words = weeklyHomeworkStore[activeWeekId]?.words;
-      if (!words || dictationCurrentWordIdx >= words.length) {
-        finishDictation();
-        return;
-      }
-
-      const wordObj = words[dictationCurrentWordIdx];
-      const wordNum = dictationCurrentWordIdx + 1;
-
-      document.getElementById('activeWordStep').textContent = `Word ${wordNum} of ${words.length}`;
-      document.getElementById('activeWordBigNumber').textContent = `# ${wordNum}`;
-      document.getElementById('dictationOverallProgress').style.width = `${((wordNum - 1) / words.length) * 100}%`;
-      document.getElementById('writingCountdownBox').classList.add('hidden');
-
-      playBeep(440, 0.1);
-      readWordThreeTimes(wordObj.word, () => {
-        if (!isDictationRunning) return;
-        startWritingCountdown();
-      });
-    }
-
-    function updateRepeatDots(activeRepeat) {
-      const dotsContainer = document.getElementById('speechRepeatDots');
-      dotsContainer.innerHTML = '';
-      for (let i = 1; i <= 3; i++) {
-        const dot = document.createElement('span');
-        dot.className = `w-3.5 h-3.5 rounded-full transition-all ${i <= activeRepeat ? 'bg-brand-400 ring-2 ring-brand-300' : 'bg-white/20'}`;
-        dotsContainer.appendChild(dot);
-      }
-    }
-
-    function readWordThreeTimes(word, onComplete) {
-      let repetition = 1;
-
-      function speakOnce() {
-        if (!isDictationRunning || isDictationPaused) return;
-
-        updateRepeatDots(repetition);
-        document.getElementById('dictationStatusBadge').textContent = `Speaking (${repetition}/3)`;
-        document.getElementById('stageSubPrompt').textContent = `Listen carefully (Repetition ${repetition} of 3)`;
-
-        speakText(word, () => {
-          if (!isDictationRunning || isDictationPaused) return;
-          if (repetition < 3) {
-            repetition++;
-            setTimeout(speakOnce, 1200);
-          } else {
-            updateRepeatDots(3);
-            setTimeout(onComplete, 800);
-          }
-        });
-      }
-
-      speakOnce();
-    }
-
-    function startWritingCountdown() {
-      dictationCountdownRemaining = dictationWaitInterval;
-      document.getElementById('dictationStatusBadge').textContent = 'Writing Time ✍️';
-      document.getElementById('stageSubPrompt').textContent = 'Write in your Home Learning Book';
-      document.getElementById('writingCountdownBox').classList.remove('hidden');
-      document.getElementById('countdownNumber').textContent = dictationCountdownRemaining;
-
-      clearInterval(dictationTimerId);
-      dictationTimerId = setInterval(() => {
-        if (isDictationPaused) return;
-
-        dictationCountdownRemaining--;
-        document.getElementById('countdownNumber').textContent = dictationCountdownRemaining;
-
-        if (dictationCountdownRemaining === 3) {
-          playBeep(659.25, 0.1);
-        }
-
-        if (dictationCountdownRemaining <= 0) {
-          clearInterval(dictationTimerId);
-          playBeep(880, 0.2);
-          dictationCurrentWordIdx++;
-          playDictationWordSequence();
-        }
-      }, 1000);
-    }
-
-    function repeatCurrentDictationWord() {
-      clearInterval(dictationTimerId);
-      document.getElementById('writingCountdownBox').classList.add('hidden');
-      const words = weeklyHomeworkStore[activeWeekId].words;
-      const wordObj = words[dictationCurrentWordIdx];
-      readWordThreeTimes(wordObj.word, () => {
-        startWritingCountdown();
-      });
-    }
-
-    function pauseResumeDictation() {
-      isDictationPaused = !isDictationPaused;
-      const icon = document.getElementById('pauseIcon');
-      const text = document.getElementById('pauseText');
-      if (isDictationPaused) {
-        stopCurrentAudio();
-        icon.textContent = '▶️';
-        text.textContent = 'Resume';
-        showNotification('Dictation Paused', '⏸️');
-      } else {
-        icon.textContent = '⏸️';
-        text.textContent = 'Pause';
-        showNotification('Dictation Resumed', '▶️');
-      }
-    }
-
-    function skipToNextDictationWord() {
-      clearInterval(dictationTimerId);
-      stopCurrentAudio();
-      dictationCurrentWordIdx++;
-      playDictationWordSequence();
-    }
-
-    function abortDictation() {
-      clearInterval(dictationTimerId);
-      stopCurrentAudio();
-      isDictationRunning = false;
-      isDictationPaused = false;
-      releaseWakeLock();
-      resetDictationStage();
-      showNotification('Dictation Stopped', '⏹️');
-    }
-
-    function resetDictationStage() {
-      document.getElementById('dictationStageIdle').classList.remove('hidden');
-      document.getElementById('dictationStageActive').classList.add('hidden');
-      document.getElementById('dictationStageComplete').classList.add('hidden');
-    }
-
-    function finishDictation() {
-      isDictationRunning = false;
-      releaseWakeLock();
-      document.getElementById('dictationStageActive').classList.add('hidden');
-      document.getElementById('dictationStageComplete').classList.remove('hidden');
-
-      const answerList = document.getElementById('dictationAnswerKeyList');
-      answerList.innerHTML = '';
-      const words = weeklyHomeworkStore[activeWeekId].words;
-
-      words.forEach((item, idx) => {
-        const row = document.createElement('div');
-        row.className = 'p-3.5 flex items-center justify-between hover:bg-slate-50 text-sm';
-        row.innerHTML = `
-          <div class="flex items-center space-x-3">
-            <span class="w-7 h-7 rounded-xl bg-slate-100 text-slate-700 font-bold flex items-center justify-center text-xs">
-              #${idx + 1}
-            </span>
-            <span class="font-kid font-bold text-lg text-slate-900">${item.word}</span>
-            <span class="text-xs text-slate-400 font-mono hidden sm:inline">${item.phonetic}</span>
-          </div>
-          <button onclick="speakText('${item.word}')" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-3 py-1.5 rounded-xl flex items-center space-x-1">
-            <span>🔊 Listen</span>
-          </button>
-        `;
-        answerList.appendChild(row);
-      });
-    }
-
-    function restartDictation() {
-      resetDictationStage();
-      startDictationSession();
-    }
-
-    function getWeekJsCode(weekKey) {
-      const week = weeklyHomeworkStore[weekKey];
-      if (!week) return '';
-
-      const cleanFileName = week.fileName || `${weekKey}.js`;
-      return `/**
- * SpellQuest PYP - Independent Week Page File
- * File Location: data/${cleanFileName}
- */
-window.registerSpellingWeek({
-  id: "${week.id || weekKey}",
-  fileName: "${cleanFileName}",
-  title: "${week.title || weekKey}",
-  theme: "${week.theme || 'Vocabulary'}",
-  date: "${week.date || 'September 2026'}",
-  words: ${JSON.stringify(week.words || [], null, 4)}
-});
-`;
-    }
-
-    function updateDataModalCode() {
-      const codeArea = document.getElementById('dataJsCodeDisplay');
-      if (codeArea) {
-        codeArea.value = getWeekJsCode(modalSelectedWeekId);
-      }
-      const badge = document.getElementById('modalFileNameBadge');
-      if (badge) {
-        badge.textContent = `data/${modalSelectedWeekId}.js`;
-      }
-      const label = document.getElementById('btnDownloadLabel');
-      if (label) {
-        label.textContent = `Download ${modalSelectedWeekId}.js`;
-      }
-    }
-
-    function renderModalWeekSelector() {
-      const container = document.getElementById('modalWeekSelector');
-      if (!container) return;
-      container.innerHTML = '';
-
-      Object.keys(weeklyHomeworkStore).forEach(weekKey => {
+      shuffled.forEach(text => {
         const btn = document.createElement('button');
-        const isSelected = (weekKey === modalSelectedWeekId);
-        btn.className = `px-2.5 py-1 rounded-lg text-xs font-mono font-bold transition-all ${
-          isSelected 
-            ? 'bg-brand-600 text-white' 
-            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-        }`;
-        btn.textContent = `${weekKey}.js`;
-        btn.onclick = () => {
-          modalSelectedWeekId = weekKey;
-          renderModalWeekSelector();
-          updateDataModalCode();
-        };
-        container.appendChild(btn);
+        btn.textContent = text;
+        btn.className = "bg-indigo-100 border-2 border-indigo-200 hover:bg-indigo-200 text-indigo-900 font-bold px-5 py-3 rounded-xl text-lg shadow-sm transition-transform active:scale-95";
+        btn.onclick = () => pickBlock(btn, text);
+        bank.appendChild(btn);
       });
     }
 
-    function openDataModal() {
-      modalSelectedWeekId = activeWeekId;
-      renderModalWeekSelector();
-      updateDataModalCode();
-      document.getElementById('dataModal').classList.remove('hidden');
-    }
+    function pickBlock(btn, text) {
+      const dropZone = document.getElementById('dropZone');
+      const placeholder = document.getElementById('dropPlaceholder');
+      if (placeholder) placeholder.remove();
 
-    function closeDataModal() {
-      document.getElementById('dataModal').classList.add('hidden');
-    }
+      selectedBlocks.push(text);
+      btn.disabled = true;
+      btn.classList.add('opacity-30', 'pointer-events-none');
 
-    function copyDataFileCode() {
-      const codeArea = document.getElementById('dataJsCodeDisplay');
-      codeArea.select();
-      document.execCommand('copy');
-
-      const toast = document.getElementById('copyToastMessage');
-      toast.style.opacity = '1';
-      setTimeout(() => {
-        toast.style.opacity = '0';
-      }, 2500);
-      showNotification('Copied JS code to clipboard!', '📋');
-    }
-
-    function downloadActiveWeekJsFile() {
-      const code = getWeekJsCode(modalSelectedWeekId);
-      const blob = new Blob([code], { type: 'text/javascript' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${modalSelectedWeekId}.js`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      showNotification(`Downloaded ${modalSelectedWeekId}.js`, '💾');
-    }
-
-    function switchMainTab(tab) {
-      stopListenAllWords();
-
-      currentMainTab = tab;
-      const tabExplorerView = document.getElementById('tabExplorerView');
-      const tabDictationView = document.getElementById('tabDictationView');
-      const navBtnExplorer = document.getElementById('navBtnExplorer');
-      const navBtnDictation = document.getElementById('navBtnDictation');
-
-      [navBtnExplorer, navBtnDictation].forEach(btn => {
-        btn.className = 'px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all text-slate-600 hover:text-slate-900 flex items-center space-x-1.5';
-      });
-
-      tabExplorerView.classList.add('hidden');
-      tabDictationView.classList.add('hidden');
-
-      if (tab === 'explorer') {
-        tabExplorerView.classList.remove('hidden');
-        navBtnExplorer.className = 'px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all bg-white text-brand-700 shadow-sm flex items-center space-x-1.5';
-      } else {
-        tabDictationView.classList.remove('hidden');
-        navBtnDictation.className = 'px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all bg-white text-brand-700 shadow-sm flex items-center space-x-1.5';
-      }
-    }
-
-    window.onload = function() {
-      probeDataFolder();
+      const activeBlock = document.createElement('span');
+      activeBlock.textContent = text;
+      activeBlock.className = "bg-amber-400 text-amber-950 font-bold px-4 py-2 rounded-xl shadow-sm cursor-pointer hover:bg-amber-300 transition-colors";
       
-      // Global listener to unlock audio on first screen interaction
-      document.addEventListener('touchstart', unlockAudioForIos, { once: true, passive: true });
-      document.addEventListener('click', unlockAudioForIos, { once: true, passive: true });
+      activeBlock.onclick = () => {
+        activeBlock.remove();
+        selectedBlocks = selectedBlocks.filter(b => b !== text);
+        btn.disabled = false;
+        btn.classList.remove('opacity-30', 'pointer-events-none');
+        if(selectedBlocks.length === 0) {
+            dropZone.innerHTML = '<span id="dropPlaceholder" class="text-sm text-indigo-400">Click words below to place them here...</span>';
+        }
+      };
+      dropZone.appendChild(activeBlock);
+    }
 
-      if ('speechSynthesis' in window) {
-        window.speechSynthesis.onvoiceschanged = () => {};
+    function checkSentence() {
+      if (!window.chaptersData || !window.chaptersData[currentChapterIndex]) return;
+      const currentContent = window.chaptersData[currentChapterIndex].content || [];
+      if(!currentContent[puzzleStep] || !currentContent[puzzleStep].puzzle) return;
+
+      const currentPuzzle = currentContent[puzzleStep].puzzle;
+      const feedback = document.getElementById('feedbackText');
+
+      if (JSON.stringify(selectedBlocks) === JSON.stringify(currentPuzzle)) {
+        feedback.className = "text-base font-bold text-emerald-600";
+        feedback.textContent = "🎉 Excellent! Perfect order! (+10 Points)";
+        addScore(10); 
+
+        setTimeout(() => {
+          puzzleStep = (puzzleStep + 1) % currentContent.length;
+          getChapterState(currentBookId, currentChapterIndex).puzzleStep = puzzleStep;
+          saveToLocalStorage();
+          initPuzzle();
+        }, 1500);
+      } else {
+        feedback.className = "text-base font-bold text-rose-500";
+        feedback.textContent = "❌ Not quite right. Try again!";
+        setTimeout(() => initPuzzle(), 1500);
       }
-    };
+    }
+    
+    function renderQuiz() {
+      const quizData = window.quizzesData ? window.quizzesData[currentChapterIndex] : null;
+      
+      if (!quizData || !quizData.questions || quizData.questions.length === 0) {
+          document.getElementById('quizContainer').innerHTML = `
+            <div class="p-6 text-slate-500 bg-slate-50 rounded-2xl border border-slate-200">
+              No reading comprehension quiz found for this chapter on server (<code>quiz${currentChapterIndex + 1}.js</code>).
+            </div>
+          `;
+          document.getElementById('btnSubmitQuiz').classList.add('hidden');
+          document.getElementById('btnShowAnswer').classList.add('hidden');
+          document.getElementById('btnNextQuiz').classList.add('hidden');
+          return;
+      }
+
+      currentQuizQuestions = quizData.questions;
+      document.getElementById('totalQuizNumber').textContent = currentQuizQuestions.length;
+
+      const chState = getChapterState(currentBookId, currentChapterIndex);
+      
+      if (!quizRewarded[currentBookId]) {
+          quizRewarded[currentBookId] = {};
+      }
+      if (!quizRewarded[currentBookId][currentChapterIndex]) {
+          quizRewarded[currentBookId][currentChapterIndex] = 0; 
+      }
+
+      if (chState.quiz.isCompleted) {
+        showQuizCompletedScreen();
+        return;
+      }
+
+      currentQuizIndex = chState.quiz.currentIndex || 0;
+      if (currentQuizIndex >= currentQuizQuestions.length) {
+        currentQuizIndex = currentQuizQuestions.length - 1;
+      }
+
+      document.getElementById('quizContainer').innerHTML = `
+          <div class="mb-6">
+              <h4 id="quizQuestionText" class="text-xl font-semibold text-slate-800 leading-snug">Loading question...</h4>
+          </div>
+          <div id="quizOptionsContainer" class="space-y-3"></div>
+      `;
+      
+      loadQuizQuestion();
+    }
+
+    function showQuizCompletedScreen() {
+      document.getElementById('currentQuizNumber').textContent = currentQuizQuestions.length;
+      document.getElementById('quizContainer').innerHTML = `
+          <div class="text-center py-8">
+              <span class="text-6xl mb-4 block">🏆</span>
+              <h4 class="text-2xl font-bold text-slate-800">Reading Comprehension Completed!</h4>
+              <p class="text-slate-500 mt-2">You have completed all questions for this chapter.</p>
+              <button onclick="resetAndRetryQuiz()" class="mt-6 bg-blue-500 hover:bg-blue-600 text-white font-bold px-8 py-3 rounded-2xl shadow-md transition-transform active:scale-95 text-base">
+                🔄 Reset & Retry Quiz
+              </button>
+          </div>
+      `;
+      document.getElementById('quizFeedbackContainer').classList.add('hidden');
+      document.getElementById('btnSubmitQuiz').classList.add('hidden');
+      document.getElementById('btnShowAnswer').classList.add('hidden');
+      document.getElementById('btnNextQuiz').classList.add('hidden');
+    }
+
+    function resetAndRetryQuiz() {
+      const chState = getChapterState(currentBookId, currentChapterIndex);
+      chState.quiz.currentIndex = 0;
+      chState.quiz.isCompleted = false;
+      saveToLocalStorage();
+      renderQuiz();
+    }
+
+    function loadQuizQuestion() {
+        const question = currentQuizQuestions[currentQuizIndex];
+        document.getElementById('currentQuizNumber').textContent = currentQuizIndex + 1;
+        document.getElementById('quizQuestionText').textContent = question.question;
+        
+        const optionsContainer = document.getElementById('quizOptionsContainer');
+        optionsContainer.innerHTML = '';
+        selectedQuizOption = null;
+
+        question.answerOptions.forEach((option, index) => {
+            const btn = document.createElement('button');
+            btn.className = "quiz-option w-full text-left p-4 rounded-xl border-2 border-slate-200 text-slate-700 bg-white hover:bg-slate-50 font-medium text-lg";
+            btn.textContent = option.text;
+            btn.onclick = () => selectQuizOption(btn, index);
+            optionsContainer.appendChild(btn);
+        });
+
+        document.getElementById('quizFeedbackContainer').classList.add('hidden');
+        document.getElementById('btnSubmitQuiz').classList.remove('hidden');
+        document.getElementById('btnShowAnswer').classList.remove('hidden');
+        document.getElementById('btnNextQuiz').classList.add('hidden');
+        
+        document.getElementById('btnSubmitQuiz').disabled = true;
+        document.getElementById('btnSubmitQuiz').classList.add('opacity-50', 'cursor-not-allowed');
+    }
+
+    function selectQuizOption(selectedBtn, index) {
+        const optionsContainer = document.getElementById('quizOptionsContainer');
+        Array.from(optionsContainer.children).forEach(btn => {
+            btn.classList.remove('selected', 'border-blue-500', 'bg-blue-50');
+        });
+
+        selectedBtn.classList.add('selected', 'border-blue-500', 'bg-blue-50');
+        selectedQuizOption = index;
+
+        const submitBtn = document.getElementById('btnSubmitQuiz');
+        submitBtn.disabled = false;
+        submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+    }
+
+    function submitQuizAnswer() {
+        if (selectedQuizOption === null) return;
+
+        const question = currentQuizQuestions[currentQuizIndex];
+        const selectedObj = question.answerOptions[selectedQuizOption];
+        const isCorrect = selectedObj.isCorrect;
+
+        displayQuizFeedback(isCorrect, selectedObj.rationale);
+        lockQuizOptions();
+
+        if (isCorrect) {
+            const maxScoreForChapter = currentQuizQuestions.length * 5;
+            if (!quizRewarded[currentBookId]) quizRewarded[currentBookId] = {};
+            const currentAwarded = quizRewarded[currentBookId][currentChapterIndex] || 0;
+            if (currentAwarded < maxScoreForChapter) {
+                addScore(5); 
+                quizRewarded[currentBookId][currentChapterIndex] = currentAwarded + 5;
+            }
+        }
+    }
+    
+    function showQuizAnswer() {
+        const question = currentQuizQuestions[currentQuizIndex];
+        let correctIndex = 0;
+        question.answerOptions.forEach((opt, idx) => {
+            if (opt.isCorrect) correctIndex = idx;
+        });
+        
+        const rationale = question.answerOptions[correctIndex].rationale;
+        displayQuizFeedback(false, "Correct Answer Revealed: " + rationale, correctIndex);
+        lockQuizOptions();
+    }
+
+    function displayQuizFeedback(isCorrect, rationaleText, forceHighlightCorrectIndex = -1) {
+        const feedbackContainer = document.getElementById('quizFeedbackContainer');
+        const resultText = document.getElementById('quizFeedbackResult');
+        const rationale = document.getElementById('quizRationaleText');
+        
+        feedbackContainer.classList.remove('hidden', 'bg-emerald-50', 'bg-rose-50', 'bg-slate-50');
+        
+        if (isCorrect) {
+            feedbackContainer.classList.add('bg-emerald-50');
+            resultText.textContent = "🎉 Correct! (+5 Points)";
+            resultText.className = "font-bold text-lg mb-1 text-emerald-700";
+        } else if (forceHighlightCorrectIndex !== -1) {
+            feedbackContainer.classList.add('bg-slate-50');
+            resultText.textContent = "👀 Here is the answer:";
+            resultText.className = "font-bold text-lg mb-1 text-slate-700";
+        } else {
+            feedbackContainer.classList.add('bg-rose-50');
+            resultText.textContent = "❌ Not quite right.";
+            resultText.className = "font-bold text-lg mb-1 text-rose-700";
+        }
+        
+        rationale.textContent = rationaleText;
+
+        const optionsContainer = document.getElementById('quizOptionsContainer');
+        const question = currentQuizQuestions[currentQuizIndex];
+        
+        Array.from(optionsContainer.children).forEach((btn, index) => {
+            if (question.answerOptions[index].isCorrect) {
+                btn.classList.add('correct', 'border-emerald-500', 'bg-emerald-50');
+                btn.classList.remove('selected', 'border-blue-500', 'bg-blue-50');
+            } else if (index === selectedQuizOption && !isCorrect && forceHighlightCorrectIndex === -1) {
+                btn.classList.add('incorrect', 'border-rose-500', 'bg-rose-50');
+                btn.classList.remove('selected', 'border-blue-500', 'bg-blue-50');
+            }
+        });
+
+        document.getElementById('btnSubmitQuiz').classList.add('hidden');
+        document.getElementById('btnShowAnswer').classList.add('hidden');
+        
+        const nextBtn = document.getElementById('btnNextQuiz');
+        nextBtn.classList.remove('hidden');
+        
+        if (currentQuizIndex === currentQuizQuestions.length - 1) {
+            nextBtn.textContent = "Finish Quiz 🏆";
+        } else {
+            nextBtn.textContent = "Next Question ➡️";
+        }
+    }
+
+    function lockQuizOptions() {
+        const optionsContainer = document.getElementById('quizOptionsContainer');
+        Array.from(optionsContainer.children).forEach(btn => {
+            btn.disabled = true;
+            btn.classList.add('cursor-not-allowed', 'opacity-80');
+        });
+    }
+
+    function nextQuizQuestion() {
+        const chState = getChapterState(currentBookId, currentChapterIndex);
+
+        if (currentQuizIndex < currentQuizQuestions.length - 1) {
+            currentQuizIndex++;
+            chState.quiz.currentIndex = currentQuizIndex;
+            saveToLocalStorage();
+            loadQuizQuestion();
+        } else {
+            chState.quiz.isCompleted = true;
+            saveToLocalStorage();
+            showQuizCompletedScreen();
+        }
+    }
+
+    function renderFitb() {
+      const chState = getChapterState(currentBookId, currentChapterIndex);
+
+      if (!fitbRewarded[currentBookId]) {
+          fitbRewarded[currentBookId] = {};
+      }
+      if (!fitbRewarded[currentBookId][currentChapterIndex]) {
+          fitbRewarded[currentBookId][currentChapterIndex] = 0; 
+      }
+
+      if (chState.fitb.isCompleted) {
+        showFitbCompletedScreen();
+        return;
+      }
+
+      if (!chState.fitb.questions || chState.fitb.questions.length === 0) {
+        generateFitbQuestionsForChapter(currentChapterIndex);
+      }
+
+      currentFitbQuestions = chState.fitb.questions || [];
+      document.getElementById('totalFitbNumber').textContent = currentFitbQuestions.length;
+
+      if (currentFitbQuestions.length === 0) {
+          document.getElementById('fitbContainer').innerHTML = '<div class="p-4 text-slate-500">No vocabulary items found in this chapter to create a fill-in-the-blank test.</div>';
+          document.getElementById('btnSubmitFitb').classList.add('hidden');
+          document.getElementById('btnShowFitbAnswer').classList.add('hidden');
+          document.getElementById('btnNextFitb').classList.add('hidden');
+          return;
+      }
+
+      currentFitbIndex = chState.fitb.currentIndex || 0;
+      if (currentFitbIndex >= currentFitbQuestions.length) {
+        currentFitbIndex = currentFitbQuestions.length - 1;
+      }
+
+      document.getElementById('fitbContainer').innerHTML = `
+          <div class="mb-6">
+              <h4 id="fitbQuestionText" class="text-xl font-semibold text-slate-800 leading-snug">Loading question...</h4>
+          </div>
+          <div id="fitbOptionsContainer" class="space-y-3"></div>
+      `;
+      
+      loadFitbQuestion();
+    }
+
+    function generateFitbQuestionsForChapter(chIdx) {
+      if (!window.chaptersData || !window.chaptersData[chIdx]) return;
+      const content = window.chaptersData[chIdx].content || [];
+
+      let candidateWords = [];
+      let vocabToSentenceMap = {};
+      
+      content.forEach(item => {
+          if (item.vocab) {
+              for (let key in item.vocab) {
+                  const cleanKey = key.toLowerCase();
+                  const regex = new RegExp(`\\b${cleanKey}\\b`, 'i');
+                  const match = item.en.match(regex);
+                  if (match) {
+                      let w = match[0];
+                      if (!candidateWords.includes(w)) {
+                          candidateWords.push(w);
+                          vocabToSentenceMap[w] = item.en;
+                      }
+                  }
+              }
+          }
+      });
+
+      if (candidateWords.length < 12) {
+          content.forEach(item => {
+              let words = item.en.match(/\b[a-zA-Z]{5,}\b/g) || [];
+              words.forEach(w => {
+                  let lowerW = w.toLowerCase();
+                  if (!candidateWords.some(cw => cw.toLowerCase() === lowerW)) {
+                      candidateWords.push(w);
+                      vocabToSentenceMap[w] = item.en;
+                  }
+              });
+          });
+      }
+
+      candidateWords = candidateWords.sort(() => 0.5 - Math.random()).slice(0, 12);
+      
+      const generated = candidateWords.map(word => {
+          const sentence = vocabToSentenceMap[word];
+          const blankedSentence = sentence.replace(new RegExp(`\\b${word}\\b`, 'i'), '________');
+          
+          let allOtherWords = Object.keys(vocabToSentenceMap).filter(w => w.toLowerCase() !== word.toLowerCase());
+          let distractors = allOtherWords.sort(() => 0.5 - Math.random()).slice(0, 3);
+          
+          const fallbacks = ["magic", "dragon", "jumped", "quickly", "forest", "looked", "happy", "water", "found", "small", "barn", "creature", "animal", "friend", "surprised", "scared"];
+          while(distractors.length < 3) {
+              let fb = fallbacks[Math.floor(Math.random() * fallbacks.length)];
+              if(!distractors.includes(fb) && fb.toLowerCase() !== word.toLowerCase()) {
+                  distractors.push(fb);
+              }
+          }
+
+          let options = [...distractors, word].sort(() => 0.5 - Math.random());
+          
+          return {
+              question: blankedSentence,
+              answerOptions: options.map(opt => ({
+                  text: opt,
+                  isCorrect: opt === word,
+                  rationale: `The correct word is "${word}".`
+              }))
+          };
+      });
+
+      const chState = getChapterState(currentBookId, chIdx);
+      chState.fitb.questions = generated;
+      chState.fitb.currentIndex = 0;
+      chState.fitb.isCompleted = false;
+      saveToLocalStorage();
+    }
+
+    function showFitbCompletedScreen() {
+      document.getElementById('currentFitbNumber').textContent = (currentFitbQuestions && currentFitbQuestions.length) || 12;
+      document.getElementById('fitbContainer').innerHTML = `
+          <div class="text-center py-8">
+              <span class="text-6xl mb-4 block">🎓</span>
+              <h4 class="text-2xl font-bold text-slate-800">Vocabulary Quiz Completed!</h4>
+              <p class="text-slate-500 mt-2">You mastered all vocabulary fill-in-the-blank questions.</p>
+              <button onclick="resetAndRetryFitb()" class="mt-6 bg-fuchsia-500 hover:bg-fuchsia-600 text-white font-bold px-8 py-3 rounded-2xl shadow-md transition-transform active:scale-95 text-base">
+                🔄 Reset & Retry Vocab
+              </button>
+          </div>
+      `;
+      document.getElementById('fitbFeedbackContainer').classList.add('hidden');
+      document.getElementById('btnSubmitFitb').classList.add('hidden');
+      document.getElementById('btnShowFitbAnswer').classList.add('hidden');
+      document.getElementById('btnNextFitb').classList.add('hidden');
+    }
+
+    function resetAndRetryFitb() {
+      const chState = getChapterState(currentBookId, currentChapterIndex);
+      chState.fitb.currentIndex = 0;
+      chState.fitb.isCompleted = false;
+      saveToLocalStorage();
+      renderFitb();
+    }
+
+    function loadFitbQuestion() {
+        const question = currentFitbQuestions[currentFitbIndex];
+        document.getElementById('currentFitbNumber').textContent = currentFitbIndex + 1;
+        document.getElementById('fitbQuestionText').textContent = question.question;
+        
+        const optionsContainer = document.getElementById('fitbOptionsContainer');
+        optionsContainer.innerHTML = '';
+        selectedFitbOption = null;
+
+        question.answerOptions.forEach((option, index) => {
+            const btn = document.createElement('button');
+            btn.className = "quiz-option w-full text-left p-4 rounded-xl border-2 border-slate-200 text-slate-700 bg-white hover:bg-slate-50 font-medium text-lg";
+            btn.textContent = option.text;
+            btn.onclick = () => selectFitbOption(btn, index);
+            optionsContainer.appendChild(btn);
+        });
+
+        document.getElementById('fitbFeedbackContainer').classList.add('hidden');
+        document.getElementById('btnSubmitFitb').classList.remove('hidden');
+        document.getElementById('btnShowFitbAnswer').classList.remove('hidden');
+        document.getElementById('btnNextFitb').classList.add('hidden');
+        
+        document.getElementById('btnSubmitFitb').disabled = true;
+        document.getElementById('btnSubmitFitb').classList.add('opacity-50', 'cursor-not-allowed');
+    }
+
+    function selectFitbOption(selectedBtn, index) {
+        const optionsContainer = document.getElementById('fitbOptionsContainer');
+        Array.from(optionsContainer.children).forEach(btn => {
+            btn.classList.remove('selected', 'border-fuchsia-500', 'bg-fuchsia-50');
+        });
+
+        selectedBtn.classList.add('selected', 'border-fuchsia-500', 'bg-fuchsia-50');
+        selectedFitbOption = index;
+
+        const submitBtn = document.getElementById('btnSubmitFitb');
+        submitBtn.disabled = false;
+        submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+    }
+
+    function submitFitbAnswer() {
+        if (selectedFitbOption === null) return;
+
+        const question = currentFitbQuestions[currentFitbIndex];
+        const selectedObj = question.answerOptions[selectedFitbOption];
+        const isCorrect = selectedObj.isCorrect;
+
+        displayFitbFeedback(isCorrect, selectedObj.rationale);
+        lockFitbOptions();
+
+        if (isCorrect) {
+            const maxScoreForChapter = currentFitbQuestions.length * 5;
+            if (!fitbRewarded[currentBookId]) fitbRewarded[currentBookId] = {};
+            const currentAwarded = fitbRewarded[currentBookId][currentChapterIndex] || 0;
+            if (currentAwarded < maxScoreForChapter) {
+                addScore(5); 
+                fitbRewarded[currentBookId][currentChapterIndex] = currentAwarded + 5;
+            }
+        }
+    }
+    
+    function showFitbAnswer() {
+        const question = currentFitbQuestions[currentFitbIndex];
+        let correctIndex = 0;
+        question.answerOptions.forEach((opt, idx) => {
+            if (opt.isCorrect) correctIndex = idx;
+        });
+        
+        const rationale = question.answerOptions[correctIndex].rationale;
+        displayFitbFeedback(false, "Correct Answer Revealed: " + rationale, correctIndex);
+        lockFitbOptions();
+    }
+
+    function displayFitbFeedback(isCorrect, rationaleText, forceHighlightCorrectIndex = -1) {
+        const feedbackContainer = document.getElementById('fitbFeedbackContainer');
+        const resultText = document.getElementById('fitbFeedbackResult');
+        const rationale = document.getElementById('fitbRationaleText');
+        
+        feedbackContainer.classList.remove('hidden', 'bg-emerald-50', 'bg-rose-50', 'bg-slate-50');
+        
+        if (isCorrect) {
+            feedbackContainer.classList.add('bg-emerald-50');
+            resultText.textContent = "🎉 Correct! (+5 Points)";
+            resultText.className = "font-bold text-lg mb-1 text-emerald-700";
+        } else if (forceHighlightCorrectIndex !== -1) {
+            feedbackContainer.classList.add('bg-slate-50');
+            resultText.textContent = "👀 Here is the answer:";
+            resultText.className = "font-bold text-lg mb-1 text-slate-700";
+        } else {
+            feedbackContainer.classList.add('bg-rose-50');
+            resultText.textContent = "❌ Not quite right.";
+            resultText.className = "font-bold text-lg mb-1 text-rose-700";
+        }
+        
+        rationale.textContent = rationaleText;
+
+        const optionsContainer = document.getElementById('fitbOptionsContainer');
+        const question = currentFitbQuestions[currentFitbIndex];
+        
+        Array.from(optionsContainer.children).forEach((btn, index) => {
+            if (question.answerOptions[index].isCorrect) {
+                btn.classList.add('correct', 'border-emerald-500', 'bg-emerald-50');
+                btn.classList.remove('selected', 'border-fuchsia-500', 'bg-fuchsia-50');
+            } else if (index === selectedFitbOption && !isCorrect && forceHighlightCorrectIndex === -1) {
+                btn.classList.add('incorrect', 'border-rose-500', 'bg-rose-50');
+                btn.classList.remove('selected', 'border-fuchsia-500', 'bg-fuchsia-50');
+            }
+        });
+
+        document.getElementById('btnSubmitFitb').classList.add('hidden');
+        document.getElementById('btnShowFitbAnswer').classList.add('hidden');
+        
+        const nextBtn = document.getElementById('btnNextFitb');
+        nextBtn.classList.remove('hidden');
+        
+        if (currentFitbIndex === currentFitbQuestions.length - 1) {
+            nextBtn.textContent = "Finish Vocab Quiz 🏆";
+        } else {
+            nextBtn.textContent = "Next Question ➡️";
+        }
+    }
+
+    function lockFitbOptions() {
+        const optionsContainer = document.getElementById('fitbOptionsContainer');
+        Array.from(optionsContainer.children).forEach(btn => {
+            btn.disabled = true;
+            btn.classList.add('cursor-not-allowed', 'opacity-80');
+        });
+    }
+
+    function nextFitbQuestion() {
+        const chState = getChapterState(currentBookId, currentChapterIndex);
+
+        if (currentFitbIndex < currentFitbQuestions.length - 1) {
+            currentFitbIndex++;
+            chState.fitb.currentIndex = currentFitbIndex;
+            saveToLocalStorage();
+            loadFitbQuestion();
+        } else {
+            chState.fitb.isCompleted = true;
+            saveToLocalStorage();
+            showFitbCompletedScreen();
+        }
+    }
+
+    // Tab Switching with State Preservation
+    function switchTab(tab) {
+      stopAudioPlayback();
+
+      document.getElementById('readerView').classList.add('hidden');
+      document.getElementById('gameView').classList.add('hidden');
+      document.getElementById('quizView').classList.add('hidden');
+      document.getElementById('fitbView').classList.add('hidden');
+
+      const inactiveClass = "flex-1 py-3 px-4 rounded-2xl font-bold bg-white text-amber-700 border-2 border-amber-200 transition-transform active:scale-95 whitespace-nowrap";
+      document.getElementById('tabReader').className = inactiveClass;
+      document.getElementById('tabGame').className = inactiveClass;
+      document.getElementById('tabQuiz').className = inactiveClass;
+      document.getElementById('tabFitb').className = inactiveClass;
+
+      if (tab === 'reader') {
+        document.getElementById('readerView').classList.remove('hidden');
+        document.getElementById('tabReader').className = "flex-1 py-3 px-4 rounded-2xl font-bold bg-amber-500 text-white shadow-md transition-transform active:scale-95 whitespace-nowrap";
+      } else if (tab === 'game') {
+        document.getElementById('gameView').classList.remove('hidden');
+        document.getElementById('tabGame').className = "flex-1 py-3 px-4 rounded-2xl font-bold bg-indigo-500 text-white shadow-md transition-transform active:scale-95 whitespace-nowrap";
+        initPuzzle();
+      } else if (tab === 'quiz') {
+        document.getElementById('quizView').classList.remove('hidden');
+        document.getElementById('tabQuiz').className = "flex-1 py-3 px-4 rounded-2xl font-bold bg-blue-500 text-white shadow-md transition-transform active:scale-95 whitespace-nowrap";
+        renderQuiz();
+      } else if (tab === 'fitb') {
+        document.getElementById('fitbView').classList.remove('hidden');
+        document.getElementById('tabFitb').className = "flex-1 py-3 px-4 rounded-2xl font-bold bg-fuchsia-500 text-white shadow-md transition-transform active:scale-95 whitespace-nowrap";
+        renderFitb();
+      }
+    }
+
+    // --- Application Initialization ---
+    window.addEventListener('load', async () => {
+      loadFromLocalStorage();
+      await fetchServerBooksRegistry();
+      await loadBookScriptsFromServer(currentBookId);
+    }); 
   </script>
 </body>
 </html>

@@ -3,11 +3,20 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Zoey & Sassafras Reading Assistant</title>
+  <title>Zoey & Sassafras Reading Assistant - Cloud Library Edition</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <!-- JSZip Library for client-side ZIP parsing and template generation -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Noto+Sans+TC:wght@400;700&display=swap');
+    
+    html, body {
+      height: 100%;
+      height: 100dvh;
+      overflow: hidden;
+    }
+
     body { 
       font-family: 'Fredoka', 'Noto Sans TC', sans-serif; 
       background-color: #fdfbeb; 
@@ -17,14 +26,12 @@
     .vocab-badge { cursor: pointer; transition: all 0.2s ease; }
     .vocab-badge:hover { transform: translateY(-2px); }
 
-    /* Sentence reading active row glow */
     .sentence-playing {
       background-color: #fef3c7 !important;
       box-shadow: 0 0 0 2px #f59e0b, 0 8px 16px -2px rgba(245, 158, 11, 0.15) !important;
       transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
-    /* Word-level Karaoke sync highlight with Speechify timestamps */
     .karaoke-highlight {
       background-color: #10b981 !important; 
       color: #ffffff !important; 
@@ -36,13 +43,51 @@
       transition: all 0.08s ease-in-out;
     }
 
-    /* Custom Scrollbar */
-    ::-webkit-scrollbar { width: 8px; height: 8px; }
-    ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: #fcd34d; border-radius: 4px; }
-    ::-webkit-scrollbar-thumb:hover { background: #fbbf24; }
+    .story-text-en {
+      text-align: justify;
+      text-justify: inter-word;
+      word-break: normal;
+      overflow-wrap: normal;
+      word-wrap: normal;
+      hyphens: none;
+      -webkit-hyphens: none;
+      -moz-hyphens: none;
+      -ms-hyphens: none;
+    }
 
-    /* Quiz Option Styling */
+    .story-text-zh {
+      text-align: justify;
+      text-justify: inter-ideograph;
+    }
+
+    .independent-scroll::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .independent-scroll::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .independent-scroll::-webkit-scrollbar-thumb {
+      background: transparent;
+      border-radius: 4px;
+      transition: background-color 0.3s ease-out;
+    }
+    .independent-scroll.is-scrolling::-webkit-scrollbar-thumb {
+      background: rgba(245, 158, 11, 0.85);
+    }
+    .independent-scroll.is-scrolling::-webkit-scrollbar-thumb:hover {
+      background: rgba(217, 119, 6, 0.95);
+    }
+
+    .independent-scroll {
+      scrollbar-width: thin;
+      scrollbar-color: transparent transparent;
+      transition: scrollbar-color 0.3s ease-out;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      -webkit-overflow-scrolling: touch;
+    }
+
     .quiz-option { transition: all 0.2s ease; }
     .quiz-option.selected { border-color: #3b82f6; background-color: #eff6ff; }
     .quiz-option.correct { border-color: #10b981; background-color: #ecfdf5; color: #065f46; }
@@ -54,55 +99,37 @@
     window.chaptersData = [];
     window.quizzesData = {}; 
   </script>
-
-  <!-- External Chapter context data files -->
-  <script src="book/1/context/chapter1.js"></script>
-  <script src="book/1/context/chapter2.js"></script>
-  <script src="book/1/context/chapter3.js"></script>
-  <script src="book/1/context/chapter4.js"></script>
-  <script src="book/1/context/chapter5.js"></script>
-  <script src="book/1/context/chapter6.js"></script>
-  <script src="book/1/context/chapter7.js"></script>
-  <script src="book/1/context/chapter8.js"></script>
-  <script src="book/1/context/chapter9.js"></script>
-  <script src="book/1/context/chapter10.js"></script>
-  <script src="book/1/context/chapter11.js"></script>
-  <script src="book/1/context/chapter12.js"></script>
-  <script src="book/1/context/chapter13.js"></script>
-  <script src="book/1/context/chapter14.js"></script>
-  <script src="book/1/context/chapter15.js"></script>
-  <script src="book/1/context/chapter16.js"></script>
-
-  <!-- External Chapter quiz data files -->
-  <script src="book/1/quiz/quiz1.js"></script>
-  <script src="book/1/quiz/quiz2.js"></script>
-  <script src="book/1/quiz/quiz3.js"></script>
-  <script src="book/1/quiz/quiz4.js"></script>
-  <script src="book/1/quiz/quiz5.js"></script>
-  <script src="book/1/quiz/quiz6.js"></script>
-  <script src="book/1/quiz/quiz7.js"></script>
-  <script src="book/1/quiz/quiz8.js"></script>
-  <script src="book/1/quiz/quiz9.js"></script>
-  <script src="book/1/quiz/quiz10.js"></script>
-  <script src="book/1/quiz/quiz11.js"></script>
-  <script src="book/1/quiz/quiz12.js"></script>
-  <script src="book/1/quiz/quiz13.js"></script>
-  <script src="book/1/quiz/quiz14.js"></script>
-  <script src="book/1/quiz/quiz15.js"></script>
-  <script src="book/1/quiz/quiz16.js"></script>
 </head>
 
-<body class="text-slate-800 min-h-screen p-4 md:p-6 flex flex-col">
-  <div class="max-w-6xl w-full mx-auto flex flex-col md:flex-row justify-between items-center bg-white p-4 rounded-2xl shadow-sm border-2 border-amber-200 mb-6 gap-4 flex-shrink-0">
+<body class="text-slate-800 flex flex-col p-3 md:p-6 select-none md:select-auto">
+  <!-- Top Navigation Bar -->
+  <div class="max-w-7xl w-full mx-auto flex flex-col md:flex-row justify-between items-center bg-white p-3 md:p-4 rounded-2xl shadow-sm border-2 border-amber-200 mb-3 md:mb-5 gap-3 md:gap-4 flex-shrink-0">
     <div class="flex items-center space-x-3">
-      <span class="text-3xl">🐉</span>
+      <span class="text-3xl" id="headerBookEmoji">🐉</span>
       <div>
-        <h1 class="text-xl font-bold text-amber-900">Zoey & Sassafras Assistant</h1>
-        <p class="text-xs text-amber-700">Magical Animal Rescue Diary • Voice: Victoria (Synced Highlighting)</p>
+        <h1 class="text-xl font-bold text-amber-900 flex items-center gap-2">
+          <span>Zoey & Sassafras Assistant</span>
+          <span id="badgeCurrentBookTag" class="text-xs bg-amber-100 text-amber-800 font-bold px-2 py-0.5 rounded-md">Book 1</span>
+        </h1>
+        <p class="text-xs text-amber-700">Magical Animal Rescue Diary • Voice: Victoria (Speechify AI)</p>
       </div>
     </div>
     
     <div class="flex items-center space-x-3 flex-wrap justify-end">
+      <!-- Book Selector Dropdown -->
+      <div class="flex items-center bg-amber-50 border-2 border-amber-300 rounded-xl px-2 py-1 shadow-sm">
+        <label for="selectBook" class="text-xs font-bold text-amber-900 mr-2 select-none flex items-center gap-1">
+          <span>📚</span> <span>Book:</span>
+        </label>
+        <select id="selectBook" onchange="switchBook(this.value)" class="bg-white text-amber-950 font-bold text-sm rounded-lg px-2 py-1 border border-amber-200 outline-none focus:ring-2 focus:ring-amber-400 cursor-pointer max-w-[200px] truncate">
+        </select>
+      </div>
+
+      <!-- Password-Protected Admin Portal Button -->
+      <button onclick="openAdminGateway()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-3 py-2 rounded-xl shadow-xs transition-transform active:scale-95 flex items-center gap-1.5" title="後台管理（需密碼）">
+        <span>🔐</span> <span>後台管理</span>
+      </button>
+
       <!-- Auto-save Status Indicator -->
       <div id="saveStatusContainer" class="flex items-center bg-emerald-50 px-3 py-2 rounded-xl border border-emerald-200 transition-colors">
         <span id="saveStatus" class="text-xs font-bold text-emerald-600">💾 Progress Saved</span>
@@ -117,44 +144,61 @@
     </div>
   </div>
 
-  <div class="max-w-6xl w-full mx-auto flex flex-col md:flex-row gap-6 flex-1 min-h-0">
+  <!-- Main Content Layout -->
+  <div class="max-w-7xl w-full mx-auto flex flex-col md:flex-row gap-4 md:gap-6 flex-1 min-h-0 overflow-hidden">
+    
     <!-- Left Sidebar: Chapter List -->
-    <div class="w-full md:w-64 shrink-0 flex flex-col gap-2 bg-white p-4 rounded-3xl shadow-sm border-2 border-amber-100 overflow-y-auto" id="chapterList">
+    <div class="w-full md:w-64 shrink-0 flex flex-col gap-2 bg-white p-4 rounded-3xl shadow-sm border-2 border-amber-100 independent-scroll max-h-44 md:max-h-none md:h-full" id="chapterList">
+      <div class="p-4 text-sm text-amber-700 animate-pulse font-bold flex items-center gap-2">
+        <span>⏳</span> <span>Loading book data...</span>
+      </div>
     </div>
 
-    <!-- Right Content Area -->
-    <div class="flex-1 flex flex-col min-w-0">
+    <!-- Right Content Column -->
+    <div class="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
       <!-- Navigation Tabs -->
-      <div class="flex space-x-3 mb-4 pt-2 pb-2 z-10 overflow-x-auto flex-shrink-0 px-1">
-        <button onclick="switchTab('reader')" id="tabReader" class="flex-1 py-3 px-4 rounded-2xl font-bold bg-amber-500 text-white shadow-md transition-transform active:scale-95 whitespace-nowrap">📖 Read Story</button>
-        <button onclick="switchTab('game')" id="tabGame" class="flex-1 py-3 px-4 rounded-2xl font-bold bg-white text-amber-700 border-2 border-amber-200 transition-transform active:scale-95 whitespace-nowrap">🧩 Grammar Puzzle</button>
-        <button onclick="switchTab('quiz')" id="tabQuiz" class="flex-1 py-3 px-4 rounded-2xl font-bold bg-white text-amber-700 border-2 border-amber-200 transition-transform active:scale-95 whitespace-nowrap">📝 Chapter Quiz</button>
-        <button onclick="switchTab('fitb')" id="tabFitb" class="flex-1 py-3 px-4 rounded-2xl font-bold bg-white text-amber-700 border-2 border-amber-200 transition-transform active:scale-95 whitespace-nowrap">✏️ Fill in the Blank</button>
+      <div class="flex space-x-2 md:space-x-3 mb-3 pt-1 pb-1 z-10 overflow-x-auto flex-shrink-0 px-1 independent-scroll">
+        <button onclick="switchTab('reader')" id="tabReader" class="flex-1 py-3 px-3 md:px-4 rounded-2xl font-bold bg-amber-500 text-white shadow-md transition-transform active:scale-95 whitespace-nowrap text-sm md:text-base">📖 Read Story</button>
+        <button onclick="switchTab('game')" id="tabGame" class="flex-1 py-3 px-3 md:px-4 rounded-2xl font-bold bg-white text-amber-700 border-2 border-amber-200 transition-transform active:scale-95 whitespace-nowrap text-sm md:text-base">🧩 Grammar Puzzle</button>
+        <button onclick="switchTab('quiz')" id="tabQuiz" class="flex-1 py-3 px-3 md:px-4 rounded-2xl font-bold bg-white text-amber-700 border-2 border-amber-200 transition-transform active:scale-95 whitespace-nowrap text-sm md:text-base">📝 Chapter Quiz</button>
+        <button onclick="switchTab('fitb')" id="tabFitb" class="flex-1 py-3 px-3 md:px-4 rounded-2xl font-bold bg-white text-amber-700 border-2 border-amber-200 transition-transform active:scale-95 whitespace-nowrap text-sm md:text-base">✏️ Fill in the Blank</button>
       </div>
 
-      <!-- Scrollable Main Container -->
-      <div class="flex-1 overflow-y-auto px-1 pb-10">
+      <!-- Right Scrollable Container -->
+      <div class="flex-1 independent-scroll px-1 pb-16" id="mainScrollContainer">
         
         <!-- Module 1: Reader View -->
         <div id="readerView" class="space-y-4">
-          <div class="bg-white p-6 md:p-8 rounded-3xl shadow-sm border-2 border-amber-100">
+          <div class="bg-white p-5 md:p-8 rounded-3xl shadow-sm border-2 border-amber-100">
             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 border-b border-amber-100 pb-4 gap-4">
               <div>
                 <span id="displayChapterNum" class="text-xs uppercase font-bold tracking-widest text-amber-600">Chapter 1</span>
-                <h2 id="displayChapterTitle" class="text-3xl font-bold text-slate-800 mt-1">Loading...</h2>
+                <h2 id="displayChapterTitle" class="text-2xl md:text-3xl font-bold text-slate-800 mt-1">Loading...</h2>
               </div>
-              <div class="flex items-center gap-3 flex-wrap">
+              <div class="flex items-center gap-2 md:gap-3 flex-wrap">
                 <!-- Font Size Adjuster Controls -->
                 <div class="flex items-center bg-amber-50 border border-amber-200 rounded-xl px-2 py-1 shadow-sm">
                   <span class="text-xs font-bold text-amber-800 mr-2 select-none">Aa</span>
-                  <button onclick="adjustFontSize(-2)" class="w-8 h-8 flex items-center justify-center rounded-lg bg-white border border-amber-200 text-amber-900 font-bold hover:bg-amber-100 active:scale-90 transition-all text-base shadow-xs" title="Decrease Font Size" aria-label="Decrease Font Size">－</button>
+                  <button onclick="adjustFontSize(-2)" class="w-8 h-8 flex items-center justify-center rounded-lg bg-white border border-amber-200 text-amber-900 font-bold hover:bg-amber-100 active:scale-90 transition-all text-base shadow-xs" title="Decrease Font Size">－</button>
                   <span id="fontSizeDisplay" class="text-xs font-bold text-amber-800 px-2 select-none min-w-[42px] text-center">20px</span>
-                  <button onclick="adjustFontSize(2)" class="w-8 h-8 flex items-center justify-center rounded-lg bg-white border border-amber-200 text-amber-900 font-bold hover:bg-amber-100 active:scale-90 transition-all text-base shadow-xs" title="Increase Font Size" aria-label="Increase Font Size">＋</button>
+                  <button onclick="adjustFontSize(2)" class="w-8 h-8 flex items-center justify-center rounded-lg bg-white border border-amber-200 text-amber-900 font-bold hover:bg-amber-100 active:scale-90 transition-all text-base shadow-xs" title="Increase Font Size">＋</button>
                 </div>
-                <button onclick="toggleAllTranslations()" class="text-sm bg-amber-100 hover:bg-amber-200 text-amber-800 font-bold px-4 py-2 rounded-xl transition-colors">
-                  Toggle Translations
+                <!-- Read Whole Chapter Continuous Playback Button -->
+                <button onclick="togglePlayWholeChapter()" id="btnPlayWholeChapter" class="text-xs md:text-sm bg-emerald-500 hover:bg-emerald-600 text-white font-bold px-3 md:px-4 py-2 rounded-xl shadow-xs transition-transform active:scale-95 flex items-center gap-1.5" title="Read entire chapter continuously">
+                  <span id="wholeChapterIcon">▶️</span>
+                  <span id="wholeChapterLabel">Read Whole Chapter</span>
+                </button>
+                <button onclick="toggleAllTranslations()" id="btnToggleAllZh" class="text-xs md:text-sm bg-amber-100 hover:bg-amber-200 text-amber-800 font-bold px-3 md:px-4 py-2 rounded-xl transition-colors">
+                  Show Translations
                 </button>
               </div>
+            </div>
+
+            <!-- Loading Indicator Banner -->
+            <div id="bookLoadingBanner" class="hidden p-8 text-center bg-amber-50 rounded-2xl border-2 border-dashed border-amber-300 mb-4">
+              <div class="inline-block w-8 h-8 border-4 border-amber-500 border-t-transparent rounded-full animate-spin mb-3"></div>
+              <p class="font-bold text-amber-900 text-base">Loading book content...</p>
+              <p class="text-xs text-amber-700 mt-1">Retrieving chapters and quiz data</p>
             </div>
             <div id="sentencesContainer" class="space-y-3"></div>
           </div>
@@ -162,7 +206,7 @@
 
         <!-- Module 2: Grammar Puzzle Game -->
         <div id="gameView" class="hidden">
-          <div class="bg-white p-6 md:p-8 rounded-3xl shadow-sm border-2 border-indigo-100">
+          <div class="bg-white p-5 md:p-8 rounded-3xl shadow-sm border-2 border-indigo-100">
             <div class="mb-6 border-b border-indigo-100 pb-4">
               <span class="text-xs uppercase font-bold tracking-widest text-indigo-600">Grammar Puzzle</span>
               <h3 class="text-2xl font-bold text-slate-800 mt-1">Build the Sentence!</h3>
@@ -183,7 +227,7 @@
 
         <!-- Module 3: Chapter Quiz View -->
         <div id="quizView" class="hidden">
-           <div class="bg-white p-6 md:p-8 rounded-3xl shadow-sm border-2 border-blue-100">
+           <div class="bg-white p-5 md:p-8 rounded-3xl shadow-sm border-2 border-blue-100">
             <div class="mb-6 border-b border-blue-100 pb-4 flex justify-between items-end">
               <div>
                   <span class="text-xs uppercase font-bold tracking-widest text-blue-600">Reading Comprehension</span>
@@ -225,7 +269,7 @@
 
         <!-- Module 4: Fill in the Blank View -->
         <div id="fitbView" class="hidden">
-           <div class="bg-white p-6 md:p-8 rounded-3xl shadow-sm border-2 border-fuchsia-100">
+           <div class="bg-white p-5 md:p-8 rounded-3xl shadow-sm border-2 border-fuchsia-100">
             <div class="mb-6 border-b border-fuchsia-100 pb-4 flex justify-between items-end">
               <div>
                   <span class="text-xs uppercase font-bold tracking-widest text-fuchsia-600">Vocabulary Check</span>
@@ -269,6 +313,128 @@
     </div>
   </div>
 
+  <!-- PASSWORD GATEWAY MODAL -->
+  <div id="adminPasswordModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center hidden p-4 z-50">
+    <div class="bg-white max-w-sm w-full p-6 md:p-8 rounded-3xl shadow-2xl border-2 border-indigo-200 text-center relative">
+      <div class="w-14 h-14 bg-indigo-100 text-indigo-700 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-3">🔐</div>
+      <h3 class="text-xl font-bold text-slate-800 mb-1">後台管理員認證</h3>
+      <p class="text-xs text-slate-500 mb-5">請輸入管理員密碼（比對 Netlify 之 <code class="bg-slate-100 px-1 py-0.5 rounded text-indigo-700 font-mono">addspellingkey</code>）</p>
+      
+      <div class="mb-4">
+        <input type="password" id="inputAdminPassword" placeholder="Enter Password..." class="w-full text-center px-4 py-3 rounded-xl border-2 border-slate-200 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 text-base font-bold text-slate-800" onkeydown="if(event.key==='Enter') verifyAdminPassword()">
+        <p id="adminAuthError" class="text-xs text-rose-500 font-bold mt-2 hidden"></p>
+      </div>
+
+      <div class="flex space-x-2">
+        <button onclick="closeAdminGateway()" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-2.5 rounded-xl text-sm transition-colors">取消</button>
+        <button id="btnVerifyPassword" onclick="verifyAdminPassword()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 rounded-xl text-sm shadow-md transition-transform active:scale-95 flex items-center justify-center gap-1">
+          <span>解鎖</span> <span>🔓</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ADMIN PORTAL MODAL (ZIP Uploader & Netlify Blobs Manager) -->
+  <div id="adminPortalModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center hidden p-4 z-50 overflow-y-auto">
+    <div class="bg-white max-w-2xl w-full p-6 md:p-8 rounded-3xl shadow-2xl border-2 border-indigo-200 relative my-8">
+      
+      <!-- Header -->
+      <div class="flex justify-between items-center border-b border-slate-100 pb-3 mb-5">
+        <div class="flex items-center gap-2">
+          <span class="text-2xl">⚙️</span>
+          <div>
+            <h3 class="text-lg font-bold text-slate-800">Netlify Blobs 雲端書庫管理後台</h3>
+            <p class="text-xs text-emerald-600 font-bold">● 已授權管理員 (Session Active)</p>
+          </div>
+        </div>
+        <button onclick="closeAdminPortal()" class="text-slate-400 hover:text-slate-600 text-2xl font-bold px-2">&times;</button>
+      </div>
+
+      <!-- Action Tabs -->
+      <div class="flex border-b border-slate-200 mb-5 text-sm font-bold">
+        <button id="tabAdminUpload" onclick="switchAdminSubTab('upload')" class="py-2 px-4 border-b-2 border-indigo-600 text-indigo-700">📦 上傳新書 ZIP</button>
+        <button id="tabAdminList" onclick="switchAdminSubTab('list')" class="py-2 px-4 border-b-2 border-transparent text-slate-500 hover:text-slate-700">📚 現有雲端書籍</button>
+        <button id="tabAdminTpl" onclick="switchAdminSubTab('template')" class="py-2 px-4 border-b-2 border-transparent text-slate-500 hover:text-slate-700">📥 下載 ZIP 範本</button>
+      </div>
+
+      <!-- SUB-PANEL 1: ZIP UPLOADER -->
+      <div id="adminSubUpload" class="space-y-4">
+        <div class="border-2 border-dashed border-indigo-200 bg-indigo-50/50 p-6 rounded-2xl text-center">
+          <div class="text-4xl mb-2">📦</div>
+          <p class="text-sm font-bold text-indigo-950 mb-1">選取含有全書 16 章 JSON 的 ZIP 壓縮檔</p>
+          <p class="text-xs text-indigo-600 mb-4">系統會自動解析 ZIP 內的 <code class="bg-indigo-100 px-1 py-0.5 rounded">chapter1~16.json</code> 與 <code class="bg-indigo-100 px-1 py-0.5 rounded">quiz1~16.json</code></p>
+          
+          <input type="file" id="zipFileInput" accept=".zip" class="hidden" onchange="handleZipSelected(event)">
+          <button onclick="document.getElementById('zipFileInput').click()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm px-6 py-2.5 rounded-xl shadow-sm transition-transform active:scale-95 inline-flex items-center gap-1.5">
+            <span>選擇 ZIP 檔案</span> <span>📁</span>
+          </button>
+          <span id="selectedZipName" class="block text-xs font-bold text-slate-600 mt-2 truncate"></span>
+        </div>
+
+        <!-- ZIP Analysis Result Preview -->
+        <div id="zipPreviewArea" class="hidden bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-3 text-xs">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-slate-700">📊 ZIP 解析結果：</span>
+            <span id="zipStatusBadge" class="bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-md">16 Chapters Ready</span>
+          </div>
+          
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-slate-600 font-mono">
+            <div>內文章節: <strong id="countChapters" class="text-indigo-600">0</strong></div>
+            <div>測驗檔案: <strong id="countQuizzes" class="text-indigo-600">0</strong></div>
+            <div>單字題型: <strong id="countVocab" class="text-indigo-600">自動生成</strong></div>
+            <div>來源格式: <strong class="text-emerald-600">JSON</strong></div>
+          </div>
+
+          <!-- Metadata Override Fields -->
+          <div class="pt-2 border-t border-slate-200 grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <div>
+              <label class="block text-[11px] font-bold text-slate-500 mb-0.5">Book ID (數字):</label>
+              <input type="number" id="inputMetaId" class="w-full px-2 py-1.5 rounded-lg border border-slate-300 font-bold text-slate-800 text-xs">
+            </div>
+            <div>
+              <label class="block text-[11px] font-bold text-slate-500 mb-0.5">書名 (Title):</label>
+              <input type="text" id="inputMetaTitle" class="w-full px-2 py-1.5 rounded-lg border border-slate-300 font-bold text-slate-800 text-xs">
+            </div>
+            <div>
+              <label class="block text-[11px] font-bold text-slate-500 mb-0.5">Emoji 代表圖示:</label>
+              <input type="text" id="inputMetaEmoji" class="w-full px-2 py-1.5 rounded-lg border border-slate-300 font-bold text-slate-800 text-xs">
+            </div>
+          </div>
+        </div>
+
+        <div class="flex justify-end gap-2 pt-2">
+          <button id="btnUploadToBlob" onclick="uploadZipToNetlifyBlob()" disabled class="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold px-6 py-2.5 rounded-xl text-sm shadow-md transition-transform active:scale-95 flex items-center gap-1.5">
+            <span>寫入 Netlify Blobs</span> <span>🚀</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- SUB-PANEL 2: EXISTING BLOB BOOKS -->
+      <div id="adminSubList" class="hidden space-y-3">
+        <p class="text-xs text-slate-500">以下為儲存於 Netlify Blobs 持久層中的書籍。刪除後即時自雲端移除：</p>
+        <div id="blobBooksContainer" class="space-y-2 max-h-64 overflow-y-auto pr-1 independent-scroll">
+          <div class="p-4 text-center text-xs text-slate-400">載入中...</div>
+        </div>
+      </div>
+
+      <!-- SUB-PANEL 3: TEMPLATE GENERATOR -->
+      <div id="adminSubTemplate" class="hidden space-y-4">
+        <div class="bg-amber-50 p-4 rounded-2xl border border-amber-200 text-xs text-amber-900 leading-relaxed">
+          <strong class="block text-sm font-bold mb-1">💡 如何準備您的 ZIP 檔案？</strong>
+          請下載下方的標準 ZIP 範本。解壓縮後將包含 16 個章節的 <code class="font-mono bg-white px-1 py-0.5 rounded">chapterX.json</code> 與 16 個 <code class="font-mono bg-white px-1 py-0.5 rounded">quizX.json</code> 範本，編輯後重新壓縮為 ZIP 即可在上方分頁直接上傳！
+        </div>
+
+        <div class="flex justify-center pt-2">
+          <button onclick="downloadSampleZipTemplate()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-6 py-3 rounded-xl text-sm shadow-md transition-transform active:scale-95 flex items-center gap-2">
+            <span>下載標準全書 ZIP 範本 (16章 JSON)</span> <span>📥</span>
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Vocabulary Modal -->
   <div id="vocabModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center hidden p-4 z-50">
     <div class="bg-white max-w-sm w-full p-8 rounded-3xl shadow-2xl border-2 border-amber-300 text-center relative overflow-hidden">
       <div class="absolute top-0 left-0 w-full h-2 bg-amber-400"></div>
@@ -288,10 +454,9 @@
     </div>
   </div>
 
-  <!-- Dedicated iPad Safari audio player -->
+  <!-- Audio Player & Diagnostic Banner -->
   <audio id="speechifyAudioPlayer" playsinline preload="auto" class="hidden"></audio>
 
-  <!-- Diagnostic Toast Banner for iPad / Netlify Errors -->
   <div id="ttsErrorBanner" class="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 max-w-md bg-rose-600 text-white p-4 rounded-2xl shadow-xl z-50 text-sm hidden transition-all">
     <div class="flex items-start justify-between gap-2">
       <div>
@@ -303,12 +468,23 @@
   </div>
 
   <script>
+    // Hybrid Books Registry: Default Book 1 + Dynamic Netlify Blobs Books
+    let availableBooks = [
+      {
+        id: "1",
+        title: "Dragons and Marshmallows",
+        series: "Book 1",
+        emoji: "🐉",
+        totalChapters: 16,
+        source: "local"
+      }
+    ];
+
+    let currentBookId = "1";
     let currentChapterIndex = 0; 
-    let showAllZh = true;
+    let showAllZh = false;
     let score = 0;
     let currentWord = "";
-    
-    // User adjustable font size (in pixels)
     let currentFontSize = 20;
     const MIN_FONT_SIZE = 14;
     const MAX_FONT_SIZE = 34;
@@ -319,21 +495,25 @@
     let currentQuizIndex = 0;
     let currentQuizQuestions = [];
     let selectedQuizOption = null;
-    let quizRewarded = {}; 
 
     let currentFitbIndex = 0;
     let currentFitbQuestions = [];
     let selectedFitbOption = null;
-    let fitbRewarded = {}; 
     
-    // Per-chapter persistence state table
+    let quizRewarded = {}; 
+    let fitbRewarded = {}; 
     let chaptersState = {};
 
     let currentlyPlayingIndex = -1;
     let syncAnimFrameId = null;
 
-    // Cache stores: { audio_data: string, speech_marks: object }
+    let isReadingWholeChapter = false;
+    let wholeChapterIndex = -1;
+
     const audioCache = new Map();
+
+    // Parsed ZIP memory store before upload
+    let parsedZipBundle = null;
 
     function showTtsError(msg) {
       const banner = document.getElementById('ttsErrorBanner');
@@ -349,37 +529,511 @@
       if (banner) banner.classList.add('hidden');
     }
 
-    // Helper to get or initialize persistent state for a chapter
-    function getChapterState(chIdx) {
-      if (!chaptersState[chIdx]) {
-        chaptersState[chIdx] = {
-          puzzleStep: 0,
-          quiz: {
-            currentIndex: 0,
-            isCompleted: false
-          },
-          fitb: {
-            questions: null,
-            currentIndex: 0,
-            isCompleted: false
+    // ==========================================
+    // 🔐 ADMIN GATEWAY & PASSWORD PROTECTION
+    // ==========================================
+    function openAdminGateway() {
+      const savedPass = sessionStorage.getItem('adminKeySession');
+      if (savedPass) {
+        openAdminPortal();
+      } else {
+        document.getElementById('inputAdminPassword').value = '';
+        document.getElementById('adminAuthError').classList.add('hidden');
+        document.getElementById('adminPasswordModal').classList.remove('hidden');
+        setTimeout(() => document.getElementById('inputAdminPassword').focus(), 150);
+      }
+    }
+
+    function closeAdminGateway() {
+      document.getElementById('adminPasswordModal').classList.add('hidden');
+    }
+
+    async function verifyAdminPassword() {
+      const input = document.getElementById('inputAdminPassword').value.trim();
+      const errEl = document.getElementById('adminAuthError');
+      const btn = document.getElementById('btnVerifyPassword');
+
+      if (!input) {
+        errEl.textContent = "請輸入密碼！";
+        errEl.classList.remove('hidden');
+        return;
+      }
+
+      btn.disabled = true;
+      btn.innerHTML = '<span class="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>';
+
+      try {
+        const res = await fetch('/.netlify/functions/admin_auth', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password: input })
+        });
+
+        const data = await res.json().catch(() => ({}));
+
+        if (res.ok && data.success) {
+          sessionStorage.setItem('adminKeySession', input);
+          closeAdminGateway();
+          openAdminPortal();
+        } else {
+          errEl.textContent = data.error || "密碼錯誤，請再試一次。";
+          errEl.classList.remove('hidden');
+        }
+      } catch (err) {
+        errEl.textContent = `無法連線至驗證伺服器: ${err.message}`;
+        errEl.classList.remove('hidden');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<span>解鎖</span> <span>🔓</span>';
+      }
+    }
+
+    function openAdminPortal() {
+      document.getElementById('adminPortalModal').classList.remove('hidden');
+      switchAdminSubTab('upload');
+      refreshBlobBooksList();
+    }
+
+    function closeAdminPortal() {
+      document.getElementById('adminPortalModal').classList.add('hidden');
+    }
+
+    function switchAdminSubTab(tab) {
+      document.getElementById('adminSubUpload').classList.add('hidden');
+      document.getElementById('adminSubList').classList.add('hidden');
+      document.getElementById('adminSubTemplate').classList.add('hidden');
+
+      const inactive = "py-2 px-4 border-b-2 border-transparent text-slate-500 hover:text-slate-700";
+      const active = "py-2 px-4 border-b-2 border-indigo-600 text-indigo-700";
+
+      document.getElementById('tabAdminUpload').className = inactive;
+      document.getElementById('tabAdminList').className = inactive;
+      document.getElementById('tabAdminTpl').className = inactive;
+
+      if (tab === 'upload') {
+        document.getElementById('adminSubUpload').classList.remove('hidden');
+        document.getElementById('tabAdminUpload').className = active;
+      } else if (tab === 'list') {
+        document.getElementById('adminSubList').classList.remove('hidden');
+        document.getElementById('tabAdminList').className = active;
+        refreshBlobBooksList();
+      } else if (tab === 'template') {
+        document.getElementById('adminSubTemplate').classList.remove('hidden');
+        document.getElementById('tabAdminTpl').className = active;
+      }
+    }
+
+    // ==========================================
+    // 📦 ZIP FILE PARSER (JSZip Client-Side)
+    // ==========================================
+    async function handleZipSelected(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      document.getElementById('selectedZipName').textContent = `📄 ${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+      
+      try {
+        const zip = await JSZip.loadAsync(file);
+        const chapters = [];
+        const quizzes = {};
+        let meta = null;
+
+        // Search for manifest or book.json
+        const metaFile = zip.file(/^(book|manifest)\.json$/i)[0];
+        if (metaFile) {
+          const metaText = await metaFile.async("string");
+          try { meta = JSON.parse(metaText); } catch(e){}
+        }
+
+        // Search for chapter JSONs: chapter1.json ... chapter16.json
+        for (let i = 1; i <= 24; i++) {
+          const chFile = zip.file(new RegExp(`(^|/|context/)chapter${i}\\.json$`, 'i'))[0];
+          if (chFile) {
+            const chJsonText = await chFile.async("string");
+            try {
+              const chData = JSON.parse(chJsonText);
+              chapters.push(chData);
+            } catch (err) {
+              console.warn(`JSON parsing error in chapter${i}.json:`, err);
+            }
           }
+
+          // Search for quiz JSONs: quiz1.json ... quiz16.json
+          const qFile = zip.file(new RegExp(`(^|/|quiz/)quiz${i}\\.json$`, 'i'))[0];
+          if (qFile) {
+            const qJsonText = await qFile.async("string");
+            try {
+              const qData = JSON.parse(qJsonText);
+              quizzes[i - 1] = qData;
+            } catch (err) {
+              console.warn(`JSON parsing error in quiz${i}.json:`, err);
+            }
+          }
+        }
+
+        chapters.sort((a, b) => (Number(a.chapterId) || 0) - (Number(b.chapterId) || 0));
+
+        if (chapters.length === 0) {
+          alert("ZIP 檔案中未發現任何符合格式的 chapter1.json ～ chapter16.json！請檢查檔案名稱。");
+          return;
+        }
+
+        parsedZipBundle = {
+          metadata: meta || {
+            id: availableBooks.length + 1,
+            title: file.name.replace(/\.zip$/i, ''),
+            series: `Book ${availableBooks.length + 1}`,
+            emoji: "📖"
+          },
+          chapters: chapters,
+          quizzes: quizzes
+        };
+
+        // Populate preview UI
+        document.getElementById('countChapters').textContent = chapters.length;
+        document.getElementById('countQuizzes').textContent = Object.keys(quizzes).length;
+        document.getElementById('inputMetaId').value = parsedZipBundle.metadata.id || 2;
+        document.getElementById('inputMetaTitle').value = parsedZipBundle.metadata.title || "New Book";
+        document.getElementById('inputMetaEmoji').value = parsedZipBundle.metadata.emoji || "🍄";
+
+        document.getElementById('zipPreviewArea').classList.remove('hidden');
+        document.getElementById('btnUploadToBlob').disabled = false;
+
+      } catch (err) {
+        alert("無法讀取此 ZIP 檔案，請確認是否為標準 ZIP 格式: " + err.message);
+      }
+    }
+
+    async function uploadZipToNetlifyBlob() {
+      if (!parsedZipBundle) return;
+
+      const password = sessionStorage.getItem('adminKeySession');
+      const btn = document.getElementById('btnUploadToBlob');
+
+      // Update metadata from inputs
+      parsedZipBundle.metadata.id = String(document.getElementById('inputMetaId').value.trim() || parsedZipBundle.metadata.id);
+      parsedZipBundle.metadata.title = document.getElementById('inputMetaTitle').value.trim() || parsedZipBundle.metadata.title;
+      parsedZipBundle.metadata.emoji = document.getElementById('inputMetaEmoji').value.trim() || "📖";
+      parsedZipBundle.metadata.series = `Book ${parsedZipBundle.metadata.id}`;
+
+      btn.disabled = true;
+      btn.innerHTML = '<span class="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span> 寫入中...';
+
+      try {
+        const res = await fetch('/.netlify/functions/manage_blob_books', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'upload_book',
+            password: password,
+            bookMeta: parsedZipBundle.metadata,
+            bundle: parsedZipBundle
+          })
+        });
+
+        const data = await res.json().catch(() => ({}));
+
+        if (res.ok && data.success) {
+          alert(`🎉 恭喜！《${parsedZipBundle.metadata.title}》已成功上傳至 Netlify Blobs！所有設備已同步。`);
+          await fetchAllBooks();
+          closeAdminPortal();
+          switchBook(parsedZipBundle.metadata.id);
+        } else {
+          alert(`❌ 上傳失敗: ${data.error || "伺服器無回應"}`);
+        }
+      } catch (err) {
+        alert(`❌ 網路錯誤: ${err.message}`);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<span>寫入 Netlify Blobs</span> <span>🚀</span>';
+      }
+    }
+
+    async function refreshBlobBooksList() {
+      const container = document.getElementById('blobBooksContainer');
+      container.innerHTML = '<div class="p-4 text-center text-xs text-slate-400">正在查詢 Netlify Blobs...</div>';
+
+      try {
+        const res = await fetch('/.netlify/functions/manage_blob_books');
+        const data = await res.json();
+        const blobBooks = data.books || [];
+
+        if (blobBooks.length === 0) {
+          container.innerHTML = '<div class="p-6 text-center text-xs text-slate-500 bg-slate-50 rounded-2xl">目前 Netlify Blobs 尚無雲端書籍。請至第一分頁上傳！</div>';
+          return;
+        }
+
+        container.innerHTML = '';
+        blobBooks.forEach(b => {
+          const item = document.createElement('div');
+          item.className = "flex items-center justify-between p-3.5 bg-slate-50 border border-slate-200 rounded-2xl";
+          item.innerHTML = `
+            <div class="flex items-center gap-3">
+              <span class="text-2xl">${b.emoji || '📖'}</span>
+              <div>
+                <p class="font-bold text-sm text-slate-800">${b.series}: ${b.title}</p>
+                <p class="text-[11px] text-slate-500 font-mono">ID: ${b.id} • ${b.totalChapters || 16} Chapters • Netlify Blob</p>
+              </div>
+            </div>
+            <button onclick="deleteBlobBook('${b.id}', '${b.title}')" class="bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold px-3 py-1.5 rounded-xl text-xs transition-colors border border-rose-200">
+              🗑️ 刪除
+            </button>
+          `;
+          container.appendChild(item);
+        });
+      } catch (err) {
+        container.innerHTML = `<div class="p-4 text-rose-500 text-xs">載入失敗: ${err.message}</div>`;
+      }
+    }
+
+    async function deleteBlobBook(bId, bTitle) {
+      if (!confirm(`確定要自 Netlify Blobs 永久刪除《${bTitle}》嗎？`)) return;
+
+      const password = sessionStorage.getItem('adminKeySession');
+      try {
+        const res = await fetch('/.netlify/functions/manage_blob_books', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'delete_book',
+            password: password,
+            bookId: bId
+          })
+        });
+
+        const data = await res.json().catch(() => ({}));
+        if (res.ok && data.success) {
+          alert(data.message);
+          await fetchAllBooks();
+          refreshBlobBooksList();
+          if (String(currentBookId) === String(bId)) {
+            switchBook("1");
+          }
+        } else {
+          alert(`刪除失敗: ${data.error}`);
+        }
+      } catch (err) {
+        alert(`網路連線異常: ${err.message}`);
+      }
+    }
+
+    // ==========================================
+    // 📥 DOWNLOAD ZIP TEMPLATE GENERATOR
+    // ==========================================
+    function downloadSampleZipTemplate() {
+      const zip = new JSZip();
+
+      // Sample book.json
+      zip.file("book.json", JSON.stringify({
+        "id": "2",
+        "title": "Monsters and Mold",
+        "series": "Book 2",
+        "emoji": "🍄",
+        "totalChapters": 16
+      }, null, 2));
+
+      // 16 Chapter JSON files
+      for (let i = 1; i <= 16; i++) {
+        zip.file(`chapter${i}.json`, JSON.stringify({
+          "chapterId": i,
+          "titleEn": `Chapter ${i} Title`,
+          "titleZh": `第 ${i} 章 中文標題`,
+          "content": [
+            {
+              "en": "Zoey and Sassafras stepped into the forest on a new inquiry mission.",
+              "zh": "柔伊與薩薩弗拉斯踏進森林展開全新的探究任務。",
+              "vocab": {
+                "inquiry": {
+                  "enMeaning": "an act of asking for information or investigating",
+                  "zh": "探究、調查",
+                  "phonetic": "/ɪnˈkwaɪə.ri/",
+                  "emoji": "🔍"
+                }
+              },
+              "puzzle": ["Zoey and Sassafras", "stepped into", "the forest."]
+            }
+          ]
+        }, null, 2));
+
+        // 16 Quiz JSON files
+        zip.file(`quiz${i}.json`, JSON.stringify({
+          "questions": [
+            {
+              "questionNumber": 1,
+              "question": "Where did Zoey and Sassafras step into?",
+              "answerOptions": [
+                { "text": "The forest.", "isCorrect": true, "rationale": "They stepped into the forest for inquiry." },
+                { "text": "The kitchen.", "isCorrect": false, "rationale": "They went to the forest." },
+                { "text": "The school.", "isCorrect": false, "rationale": "They went to the woods." },
+                { "text": "The attic.", "isCorrect": false, "rationale": "They ventured into nature." }
+              ]
+            }
+          ]
+        }, null, 2));
+      }
+
+      zip.generateAsync({ type: "blob" }).then(blob => {
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = "zoey_book2_sample_package.zip";
+        link.click();
+      });
+    }
+
+    // ==========================================
+    // 📚 HYBRID BOOK ENGINE (Local + Blobs)
+    // ==========================================
+    function getCurrentBookConfig() {
+      return availableBooks.find(b => String(b.id) === String(currentBookId)) || availableBooks[0];
+    }
+
+    function getChapterState(bId, chIdx) {
+      if (!chaptersState[bId]) chaptersState[bId] = {};
+      if (!chaptersState[bId][chIdx]) {
+        chaptersState[bId][chIdx] = {
+          puzzleStep: 0,
+          quiz: { currentIndex: 0, isCompleted: false },
+          fitb: { questions: null, currentIndex: 0, isCompleted: false }
         };
       }
-      return chaptersState[chIdx];
+      return chaptersState[bId][chIdx];
+    }
+
+    async function fetchAllBooks() {
+      availableBooks = [
+        {
+          id: "1",
+          title: "Dragons and Marshmallows",
+          series: "Book 1",
+          emoji: "🐉",
+          totalChapters: 16,
+          source: "local"
+        }
+      ];
+
+      try {
+        const res = await fetch('/.netlify/functions/manage_blob_books');
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data.books)) {
+            data.books.forEach(b => {
+              if (String(b.id) !== "1") {
+                availableBooks.push(b);
+              }
+            });
+          }
+        }
+      } catch (e) {
+        console.log("Netlify Blobs manifest lookup offline or pending:", e.message);
+      }
+
+      populateBookDropdown();
+    }
+
+    function populateBookDropdown() {
+      const select = document.getElementById('selectBook');
+      select.innerHTML = '';
+
+      availableBooks.forEach(book => {
+        const opt = document.createElement('option');
+        opt.value = String(book.id);
+        opt.textContent = `${book.emoji || '📖'} ${book.series || 'Book ' + book.id}: ${book.title}`;
+        if (String(book.id) === String(currentBookId)) {
+          opt.selected = true;
+        }
+        select.appendChild(opt);
+      });
+
+      updateHeaderBookInfo();
+    }
+
+    function updateHeaderBookInfo() {
+      const book = getCurrentBookConfig();
+      document.getElementById('headerBookEmoji').textContent = book.emoji || '📖';
+      document.getElementById('badgeCurrentBookTag').textContent = book.series || `Book ${book.id}`;
+    }
+
+    async function switchBook(newBookId) {
+      currentBookId = String(newBookId);
+      currentChapterIndex = 0;
+      updateHeaderBookInfo();
+      saveToLocalStorage();
+      await loadActiveBookContent(currentBookId);
+    }
+
+    async function loadActiveBookContent(bId) {
+      stopAudioPlayback();
+      const book = getCurrentBookConfig();
+
+      const banner = document.getElementById('bookLoadingBanner');
+      if (banner) banner.classList.remove('hidden');
+
+      window.chaptersData = [];
+      window.quizzesData = {};
+
+      if (book.source === "local" || String(bId) === "1") {
+        // Load Book 1 from local JS scripts
+        document.querySelectorAll('script[data-dynamic-book-script]').forEach(el => el.remove());
+        const scriptPromises = [];
+        for (let i = 1; i <= 16; i++) {
+          scriptPromises.push(injectScriptTag(`book/1/context/chapter${i}.js`));
+          scriptPromises.push(injectScriptTag(`book/1/quiz/quiz${i}.js`));
+        }
+        await Promise.allSettled(scriptPromises);
+      } else {
+        // Load from Netlify Blobs
+        try {
+          const res = await fetch(`/.netlify/functions/get_blob_book?id=${bId}`);
+          if (res.ok) {
+            const bundle = await res.json();
+            window.chaptersData = bundle.chapters || [];
+            window.quizzesData = bundle.quizzes || {};
+          } else {
+            throw new Error(`Cloud book not found (${res.status})`);
+          }
+        } catch (err) {
+          alert(`無法自雲端載入書籍: ${err.message}`);
+        }
+      }
+
+      if (Array.isArray(window.chaptersData)) {
+        window.chaptersData.sort((a, b) => (Number(a.chapterId) || 0) - (Number(b.chapterId) || 0));
+      }
+
+      if (banner) banner.classList.add('hidden');
+
+      if (currentChapterIndex >= window.chaptersData.length) {
+        currentChapterIndex = 0;
+      }
+
+      renderChapterList();
+      loadChapter(currentChapterIndex);
+    }
+
+    function injectScriptTag(src) {
+      return new Promise((resolve) => {
+        const script = document.createElement('script');
+        script.src = src;
+        script.charset = 'UTF-8';
+        script.setAttribute('data-dynamic-book-script', 'true');
+        script.onload = () => resolve({ src, status: 'loaded' });
+        script.onerror = () => resolve({ src, status: 'error' });
+        document.head.appendChild(script);
+      });
     }
 
     function loadFromLocalStorage() {
       try {
-        const savedData = localStorage.getItem('zoeySassafrasProgress_v8');
+        const savedData = localStorage.getItem('zoeySassafrasCloudBooks_v1');
         if (savedData) {
           const parsedData = JSON.parse(savedData);
           score = parsedData.score || 0;
+          currentBookId = parsedData.currentBookId || "1";
+          currentChapterIndex = parsedData.currentChapterIndex || 0;
           quizRewarded = parsedData.quizRewarded || {};
           fitbRewarded = parsedData.fitbRewarded || {};
           chaptersState = parsedData.chaptersState || {};
-          if (parsedData.fontSize) {
-            currentFontSize = parsedData.fontSize;
-          }
+          if (parsedData.fontSize) currentFontSize = parsedData.fontSize;
           document.getElementById('score').textContent = score;
         }
         updateSaveStatus(true);
@@ -388,18 +1042,21 @@
         updateSaveStatus(false, true);
       }
       updateFontSizeUI();
+      updateToggleTranslationsButtonUI();
     }
 
     function saveToLocalStorage() {
       try {
         const saveData = {
           score: score,
+          currentBookId: currentBookId,
+          currentChapterIndex: currentChapterIndex,
           quizRewarded: quizRewarded,
           fitbRewarded: fitbRewarded,
           chaptersState: chaptersState,
           fontSize: currentFontSize
         };
-        localStorage.setItem('zoeySassafrasProgress_v8', JSON.stringify(saveData));
+        localStorage.setItem('zoeySassafrasCloudBooks_v1', JSON.stringify(saveData));
         
         const statusBox = document.getElementById('saveStatusContainer');
         statusBox.classList.add('bg-emerald-100', 'border-emerald-300');
@@ -407,47 +1064,13 @@
           statusBox.classList.remove('bg-emerald-100', 'border-emerald-300');
         }, 800);
       } catch (error) {
-        console.error("Auto-save to localStorage failed", error);
         updateSaveStatus(false, true);
       }
-    }
-
-    // --- Font Size Adjustment Controls ---
-    function adjustFontSize(delta) {
-      const newSize = currentFontSize + delta;
-      if (newSize >= MIN_FONT_SIZE && newSize <= MAX_FONT_SIZE) {
-        currentFontSize = newSize;
-        applyFontSize();
-        updateFontSizeUI();
-        saveToLocalStorage();
-      }
-    }
-
-    function updateFontSizeUI() {
-      const display = document.getElementById('fontSizeDisplay');
-      if (display) {
-        display.textContent = `${currentFontSize}px`;
-      }
-    }
-
-    function applyFontSize() {
-      // Scale English sentences
-      document.querySelectorAll('#sentencesContainer p[id^="sentence-en-"]').forEach(el => {
-        el.style.fontSize = `${currentFontSize}px`;
-        el.style.lineHeight = `${Math.round(currentFontSize * 1.55)}px`;
-      });
-      // Proportionally scale Chinese translation text
-      const zhSize = Math.max(13, Math.round(currentFontSize * 0.78));
-      document.querySelectorAll('#sentencesContainer .zh-text').forEach(el => {
-        el.style.fontSize = `${zhSize}px`;
-        el.style.lineHeight = `${Math.round(zhSize * 1.5)}px`;
-      });
     }
 
     function updateSaveStatus(isSuccess, isError = false) {
       const statusText = document.getElementById('saveStatus');
       const statusBox = document.getElementById('saveStatusContainer');
-      
       if (isError) {
         statusText.textContent = "❌ Save Error";
         statusText.className = "text-xs font-bold text-rose-600";
@@ -465,27 +1088,65 @@
       saveToLocalStorage(); 
     }
 
+    function adjustFontSize(delta) {
+      const newSize = currentFontSize + delta;
+      if (newSize >= MIN_FONT_SIZE && newSize <= MAX_FONT_SIZE) {
+        currentFontSize = newSize;
+        applyFontSize();
+        updateFontSizeUI();
+        saveToLocalStorage();
+      }
+    }
+
+    function updateFontSizeUI() {
+      const display = document.getElementById('fontSizeDisplay');
+      if (display) display.textContent = `${currentFontSize}px`;
+    }
+
+    function applyFontSize() {
+      document.querySelectorAll('#sentencesContainer p[id^="sentence-en-"]').forEach(el => {
+        el.style.fontSize = `${currentFontSize}px`;
+        el.style.lineHeight = `${Math.round(currentFontSize * 1.55)}px`;
+      });
+      const zhSize = Math.max(13, Math.round(currentFontSize * 0.78));
+      document.querySelectorAll('#sentencesContainer .zh-text').forEach(el => {
+        el.style.fontSize = `${zhSize}px`;
+        el.style.lineHeight = `${Math.round(zhSize * 1.5)}px`;
+      });
+    }
+
     function renderChapterList() {
       const listContainer = document.getElementById('chapterList');
-      listContainer.innerHTML = '<div class="text-xs uppercase font-bold tracking-widest text-amber-600 mb-2 pl-2 pt-2">Chapters</div>';
+      const chapters = window.chaptersData || [];
+
+      listContainer.innerHTML = `
+        <div class="flex items-center justify-between mb-2 pl-2 pt-1 border-b border-amber-100 pb-2">
+          <span class="text-xs uppercase font-bold tracking-widest text-amber-600">Chapters</span>
+          <span class="text-xs bg-amber-100 text-amber-800 font-bold px-2 py-0.5 rounded-full">${chapters.length} Chs</span>
+        </div>
+      `;
       
-      if (!window.chaptersData || window.chaptersData.length === 0) {
-        listContainer.innerHTML += '<div class="p-4 text-sm text-slate-500">Loading chapters...</div>';
+      if (chapters.length === 0) {
+        listContainer.innerHTML += `
+          <div class="p-4 text-xs text-slate-500 leading-relaxed">
+            No chapter content loaded.
+          </div>
+        `;
         return;
       }
 
-      window.chaptersData.forEach((ch, index) => {
+      chapters.forEach((ch, index) => {
         const btn = document.createElement('button');
         const isActive = index === currentChapterIndex;
         
-        btn.className = `w-full text-left px-4 py-3 rounded-2xl transition-all duration-200 flex flex-col ${
+        btn.className = `w-full text-left px-3.5 py-2.5 rounded-2xl transition-all duration-200 flex flex-col ${
           isActive ? 'bg-amber-100 border-2 border-amber-300 shadow-sm' : 'bg-transparent border-2 border-transparent hover:bg-slate-50 text-slate-500 hover:text-slate-700'
         }`;
         
         btn.onclick = () => loadChapter(index);
         
         btn.innerHTML = `
-          <span class="text-xs font-bold ${isActive ? 'text-amber-600' : 'text-slate-400'}">Ch ${ch.chapterId}</span>
+          <span class="text-xs font-bold ${isActive ? 'text-amber-600' : 'text-slate-400'}">Ch ${ch.chapterId || (index + 1)}</span>
           <span class="text-sm font-bold truncate ${isActive ? 'text-amber-900' : ''}">${ch.titleEn}</span>
         `;
         listContainer.appendChild(btn);
@@ -495,28 +1156,28 @@
     function loadChapter(index) {
       if (!window.chaptersData || window.chaptersData.length <= index) return;
 
+      stopWholeChapterPlayback();
       stopAudioPlayback();
       currentChapterIndex = index;
       
-      // Load saved puzzle step for this chapter
-      const chState = getChapterState(currentChapterIndex);
+      const chState = getChapterState(currentBookId, currentChapterIndex);
       puzzleStep = chState.puzzleStep || 0;
       
-      document.getElementById('displayChapterNum').textContent = `Chapter ${window.chaptersData[index].chapterId}`;
-      document.getElementById('displayChapterTitle').textContent = window.chaptersData[index].titleEn;
+      const chapterObj = window.chaptersData[index];
+      document.getElementById('displayChapterNum').textContent = `Chapter ${chapterObj.chapterId || (index + 1)}`;
+      document.getElementById('displayChapterTitle').textContent = chapterObj.titleEn;
 
       renderChapterList(); 
       initReader();        
       
-      if(!document.getElementById('gameView').classList.contains('hidden')) {
-        initPuzzle();      
-      }
-      if(!document.getElementById('quizView').classList.contains('hidden')) {
-        renderQuiz();      
-      }
-      if(!document.getElementById('fitbView').classList.contains('hidden')) {
-        renderFitb();      
-      }
+      if(!document.getElementById('gameView').classList.contains('hidden')) initPuzzle();      
+      if(!document.getElementById('quizView').classList.contains('hidden')) renderQuiz();      
+      if(!document.getElementById('fitbView').classList.contains('hidden')) renderFitb();      
+
+      const mainScroll = document.getElementById('mainScrollContainer');
+      if (mainScroll) mainScroll.scrollTop = 0;
+
+      saveToLocalStorage();
     }
 
     function buildSentenceHTML(text, vocab, index) {
@@ -551,7 +1212,7 @@
       container.innerHTML = "";
       
       if (!window.chaptersData || window.chaptersData.length === 0) return;
-      const currentContent = window.chaptersData[currentChapterIndex].content;
+      const currentContent = window.chaptersData[currentChapterIndex].content || [];
 
       currentContent.forEach((item, index) => {
         const row = document.createElement('div');
@@ -562,15 +1223,15 @@
 
         row.innerHTML = `
           <div class="flex items-start justify-between gap-4">
-            <div class="flex-1">
-              <p id="sentence-en-${index}" class="text-slate-800 font-medium">${processedEnHTML}</p>
-              <p class="zh-text text-slate-500 mt-2 font-normal ${showAllZh ? '' : 'hidden'}">${item.zh}</p>
+            <div class="flex-1 min-w-0">
+              <p id="sentence-en-${index}" class="story-text-en text-slate-800 font-medium">${processedEnHTML}</p>
+              <p class="zh-text story-text-zh text-slate-500 mt-2 font-normal ${showAllZh ? '' : 'hidden'}">${item.zh || ''}</p>
             </div>
-            <div class="flex space-x-2 shrink-0">
-              <button id="btn-speak-${index}" onclick="speakSentence(${index})" class="p-3 bg-amber-100 hover:bg-amber-200 text-amber-800 rounded-xl text-lg transition-transform active:scale-95 shadow-sm min-w-[48px] flex items-center justify-center" title="Read Aloud with Victoria">
+            <div class="flex flex-col space-y-2 shrink-0 items-center justify-start">
+              <button id="btn-speak-${index}" onclick="speakSentence(${index})" class="p-2.5 sm:p-3 bg-amber-100 hover:bg-amber-200 text-amber-800 rounded-xl text-lg transition-transform active:scale-95 shadow-sm w-11 h-11 flex items-center justify-center" title="Read Aloud with Victoria">
                 <span>🔊</span>
               </button>
-              <button onclick="toggleRowZh(this)" class="p-3 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-lg transition-transform active:scale-95 shadow-sm" title="Show Translation">🌐</button>
+              <button onclick="toggleRowZh(this)" class="p-2.5 sm:p-3 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-lg transition-transform active:scale-95 shadow-sm w-11 h-11 flex items-center justify-center" title="Show Translation">🌐</button>
             </div>
           </div>
         `;
@@ -578,6 +1239,8 @@
       });
 
       applyFontSize();
+      updateToggleTranslationsButtonUI();
+      updateWholeChapterButtonUI();
     }
 
     function stopAudioPlayback() {
@@ -599,11 +1262,75 @@
       resetModalButton();
     }
 
+    function togglePlayWholeChapter() {
+      if (isReadingWholeChapter) {
+        stopWholeChapterPlayback();
+      } else {
+        startWholeChapterPlayback();
+      }
+    }
+
+    function startWholeChapterPlayback() {
+      if (!window.chaptersData || !window.chaptersData[currentChapterIndex]) return;
+      const currentContent = window.chaptersData[currentChapterIndex].content || [];
+      if (currentContent.length === 0) return;
+
+      isReadingWholeChapter = true;
+      wholeChapterIndex = 0;
+      updateWholeChapterButtonUI();
+      playWholeChapterSentence(wholeChapterIndex);
+    }
+
+    function stopWholeChapterPlayback() {
+      isReadingWholeChapter = false;
+      wholeChapterIndex = -1;
+      updateWholeChapterButtonUI();
+      stopAudioPlayback();
+    }
+
+    function updateWholeChapterButtonUI() {
+      const btn = document.getElementById('btnPlayWholeChapter');
+      const icon = document.getElementById('wholeChapterIcon');
+      const label = document.getElementById('wholeChapterLabel');
+      if (!btn || !icon || !label) return;
+
+      if (isReadingWholeChapter) {
+        btn.className = "text-xs md:text-sm bg-rose-500 hover:bg-rose-600 text-white font-bold px-3 md:px-4 py-2 rounded-xl shadow-xs transition-transform active:scale-95 flex items-center gap-1.5 animate-pulse";
+        icon.textContent = "⏹️";
+        label.textContent = "Stop Reading";
+      } else {
+        btn.className = "text-xs md:text-sm bg-emerald-500 hover:bg-emerald-600 text-white font-bold px-3 md:px-4 py-2 rounded-xl shadow-xs transition-transform active:scale-95 flex items-center gap-1.5";
+        icon.textContent = "▶️";
+        label.textContent = "Read Whole Chapter";
+      }
+    }
+
+    function advanceWholeChapter() {
+      if (!isReadingWholeChapter) return;
+      const currentContent = (window.chaptersData && window.chaptersData[currentChapterIndex]) ? window.chaptersData[currentChapterIndex].content : [];
+      wholeChapterIndex++;
+      if (wholeChapterIndex < currentContent.length) {
+        playWholeChapterSentence(wholeChapterIndex);
+      } else {
+        isReadingWholeChapter = false;
+        wholeChapterIndex = -1;
+        updateWholeChapterButtonUI();
+      }
+    }
+
+    function playWholeChapterSentence(idx) {
+      const currentContent = (window.chaptersData && window.chaptersData[currentChapterIndex]) ? window.chaptersData[currentChapterIndex].content : [];
+      if (!currentContent[idx]) return;
+
+      const row = document.getElementById(`sentence-row-${idx}`);
+      if (row) row.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+      playSpeechifyText(currentContent[idx].en, idx, false);
+    }
+
     function clearSentenceHighlight(index) {
       const row = document.getElementById(`sentence-row-${index}`);
-      if (row) {
-        row.classList.remove('sentence-playing');
-      }
+      if (row) row.classList.remove('sentence-playing');
       clearWordHighlights(index);
     }
 
@@ -616,9 +1343,7 @@
 
     function resetSentenceButton(index) {
       const btn = document.getElementById(`btn-speak-${index}`);
-      if (btn) {
-        btn.innerHTML = '<span>🔊</span>';
-      }
+      if (btn) btn.innerHTML = '<span>🔊</span>';
     }
 
     function resetModalButton() {
@@ -626,7 +1351,6 @@
       if (icon) icon.textContent = '🔊';
     }
 
-    // Speech Marks synchronized word-level highlighting
     function startWordSyncLoop(index, speechMarks) {
       const player = document.getElementById('speechifyAudioPlayer');
       const chunks = (speechMarks && speechMarks.chunks) ? speechMarks.chunks : [];
@@ -643,7 +1367,6 @@
         }
 
         const currentMs = player.currentTime * 1000;
-
         let activeChunk = null;
         for (let i = 0; i < chunks.length; i++) {
           const chunk = chunks[i];
@@ -683,19 +1406,14 @@
       syncAnimFrameId = requestAnimationFrame(update);
     }
 
-    // Play text using Speechify with full word highlight support
     async function playSpeechifyText(text, index = -1, isWord = false) {
       stopAudioPlayback();
 
       const btn = !isWord ? document.getElementById(`btn-speak-${index}`) : null;
       const modalIcon = isWord ? document.getElementById('modalAudioIcon') : null;
 
-      if (btn) {
-        btn.innerHTML = '<span class="inline-block w-5 h-5 border-2 border-amber-600 border-t-transparent rounded-full animate-spin"></span>';
-      }
-      if (modalIcon) {
-        modalIcon.innerHTML = '<span class="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>';
-      }
+      if (btn) btn.innerHTML = '<span class="inline-block w-5 h-5 border-2 border-amber-600 border-t-transparent rounded-full animate-spin"></span>';
+      if (modalIcon) modalIcon.innerHTML = '<span class="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>';
 
       let cached = audioCache.get(text);
 
@@ -709,16 +1427,10 @@
 
           const result = await response.json().catch(() => ({}));
 
-          if (!response.ok) {
-            const errDetail = result.error || `HTTP ${response.status}`;
-            throw new Error(errDetail);
-          }
+          if (!response.ok) throw new Error(result.error || `HTTP ${response.status}`);
 
           if (result.audio_data) {
-            cached = {
-              audio_data: result.audio_data,
-              speech_marks: result.speech_marks || null
-            };
+            cached = { audio_data: result.audio_data, speech_marks: result.speech_marks || null };
             audioCache.set(text, cached);
           } else {
             throw new Error("Missing audio_data in Speechify response.");
@@ -754,6 +1466,7 @@
           clearSentenceHighlight(index);
           resetSentenceButton(index);
           currentlyPlayingIndex = -1;
+          if (isReadingWholeChapter) advanceWholeChapter();
         }
         if (isWord) resetModalButton();
       };
@@ -763,6 +1476,7 @@
           clearSentenceHighlight(index);
           resetSentenceButton(index);
           currentlyPlayingIndex = -1;
+          if (isReadingWholeChapter) advanceWholeChapter();
         }
         if (isWord) resetModalButton();
       };
@@ -775,6 +1489,7 @@
         console.warn("Audio autoplay blocked by iOS Safari:", playErr);
         if (btn) resetSentenceButton(index);
         if (modalIcon) resetModalButton();
+        if (isReadingWholeChapter) stopWholeChapterPlayback();
       }
     }
 
@@ -806,10 +1521,12 @@
         utterance.onend = () => {
           clearSentenceHighlight(index);
           currentlyPlayingIndex = -1;
+          if (isReadingWholeChapter) advanceWholeChapter();
         };
         utterance.onerror = () => {
           clearSentenceHighlight(index);
           currentlyPlayingIndex = -1;
+          if (isReadingWholeChapter) advanceWholeChapter();
         };
       }
 
@@ -817,10 +1534,14 @@
     }
 
     function speakSentence(index) {
-      if (!window.chaptersData) return;
+      if (!window.chaptersData || !window.chaptersData[currentChapterIndex]) return;
+      if (isReadingWholeChapter) {
+        isReadingWholeChapter = false;
+        wholeChapterIndex = -1;
+        updateWholeChapterButtonUI();
+      }
       const currentContent = window.chaptersData[currentChapterIndex].content;
-      const text = currentContent[index].en;
-      playSpeechifyText(text, index, false);
+      playSpeechifyText(currentContent[index].en, index, false);
     }
 
     function speakWord(word) {
@@ -833,15 +1554,22 @@
       p.classList.toggle('hidden');
     }
 
+    function updateToggleTranslationsButtonUI() {
+      const btn = document.getElementById('btnToggleAllZh');
+      if (btn) btn.textContent = showAllZh ? 'Hide Translations' : 'Show Translations';
+    }
+
     function toggleAllTranslations() {
       showAllZh = !showAllZh;
       document.querySelectorAll('.zh-text').forEach(el => {
         if (showAllZh) el.classList.remove('hidden');
         else el.classList.add('hidden');
       });
+      updateToggleTranslationsButtonUI();
     }
 
     function showVocab(wordKey, index) {
+      if (!window.chaptersData || !window.chaptersData[currentChapterIndex]) return;
       const currentContent = window.chaptersData[currentChapterIndex].content;
       const cleanWord = wordKey.toLowerCase();
       const v = currentContent[index].vocab[cleanWord] || currentContent[index].vocab[wordKey];
@@ -861,10 +1589,10 @@
       stopAudioPlayback();
     }
 
-    // --- Grammar Puzzle Module with Persistence ---
     function initPuzzle() {
-      const currentContent = window.chaptersData[currentChapterIndex].content;
-      const chState = getChapterState(currentChapterIndex);
+      if (!window.chaptersData || !window.chaptersData[currentChapterIndex]) return;
+      const currentContent = window.chaptersData[currentChapterIndex].content || [];
+      const chState = getChapterState(currentBookId, currentChapterIndex);
       puzzleStep = chState.puzzleStep || 0;
 
       if(!currentContent[puzzleStep] || !currentContent[puzzleStep].puzzle) {
@@ -920,7 +1648,8 @@
     }
 
     function checkSentence() {
-      const currentContent = window.chaptersData[currentChapterIndex].content;
+      if (!window.chaptersData || !window.chaptersData[currentChapterIndex]) return;
+      const currentContent = window.chaptersData[currentChapterIndex].content || [];
       if(!currentContent[puzzleStep] || !currentContent[puzzleStep].puzzle) return;
 
       const currentPuzzle = currentContent[puzzleStep].puzzle;
@@ -933,8 +1662,7 @@
 
         setTimeout(() => {
           puzzleStep = (puzzleStep + 1) % currentContent.length;
-          // Persist step
-          getChapterState(currentChapterIndex).puzzleStep = puzzleStep;
+          getChapterState(currentBookId, currentChapterIndex).puzzleStep = puzzleStep;
           saveToLocalStorage();
           initPuzzle();
         }, 1500);
@@ -945,12 +1673,15 @@
       }
     }
     
-    // --- Chapter Quiz Module with Option A (Resume Directly) ---
     function renderQuiz() {
-      const quizData = window.quizzesData[currentChapterIndex];
+      const quizData = window.quizzesData ? window.quizzesData[currentChapterIndex] : null;
       
       if (!quizData || !quizData.questions || quizData.questions.length === 0) {
-          document.getElementById('quizContainer').innerHTML = '<div class="p-4 text-slate-500">No reading quiz available for this chapter yet.</div>';
+          document.getElementById('quizContainer').innerHTML = `
+            <div class="p-6 text-slate-500 bg-slate-50 rounded-2xl border border-slate-200">
+              No reading comprehension quiz found for this chapter.
+            </div>
+          `;
           document.getElementById('btnSubmitQuiz').classList.add('hidden');
           document.getElementById('btnShowAnswer').classList.add('hidden');
           document.getElementById('btnNextQuiz').classList.add('hidden');
@@ -960,23 +1691,18 @@
       currentQuizQuestions = quizData.questions;
       document.getElementById('totalQuizNumber').textContent = currentQuizQuestions.length;
 
-      const chState = getChapterState(currentChapterIndex);
+      const chState = getChapterState(currentBookId, currentChapterIndex);
       
-      if (!quizRewarded[currentChapterIndex]) {
-          quizRewarded[currentChapterIndex] = 0; 
-      }
+      if (!quizRewarded[currentBookId]) quizRewarded[currentBookId] = {};
+      if (!quizRewarded[currentBookId][currentChapterIndex]) quizRewarded[currentBookId][currentChapterIndex] = 0; 
 
-      // Check if this chapter was already completed
       if (chState.quiz.isCompleted) {
         showQuizCompletedScreen();
         return;
       }
 
-      // Resume at saved currentIndex
       currentQuizIndex = chState.quiz.currentIndex || 0;
-      if (currentQuizIndex >= currentQuizQuestions.length) {
-        currentQuizIndex = currentQuizQuestions.length - 1;
-      }
+      if (currentQuizIndex >= currentQuizQuestions.length) currentQuizIndex = currentQuizQuestions.length - 1;
 
       document.getElementById('quizContainer').innerHTML = `
           <div class="mb-6">
@@ -984,7 +1710,6 @@
           </div>
           <div id="quizOptionsContainer" class="space-y-3"></div>
       `;
-      
       loadQuizQuestion();
     }
 
@@ -994,7 +1719,7 @@
           <div class="text-center py-8">
               <span class="text-6xl mb-4 block">🏆</span>
               <h4 class="text-2xl font-bold text-slate-800">Reading Comprehension Completed!</h4>
-              <p class="text-slate-500 mt-2">You have finished all 12 questions for this chapter.</p>
+              <p class="text-slate-500 mt-2">You have completed all questions for this chapter.</p>
               <button onclick="resetAndRetryQuiz()" class="mt-6 bg-blue-500 hover:bg-blue-600 text-white font-bold px-8 py-3 rounded-2xl shadow-md transition-transform active:scale-95 text-base">
                 🔄 Reset & Retry Quiz
               </button>
@@ -1007,7 +1732,7 @@
     }
 
     function resetAndRetryQuiz() {
-      const chState = getChapterState(currentChapterIndex);
+      const chState = getChapterState(currentBookId, currentChapterIndex);
       chState.quiz.currentIndex = 0;
       chState.quiz.isCompleted = false;
       saveToLocalStorage();
@@ -1066,9 +1791,11 @@
 
         if (isCorrect) {
             const maxScoreForChapter = currentQuizQuestions.length * 5;
-            if (quizRewarded[currentChapterIndex] < maxScoreForChapter) {
+            if (!quizRewarded[currentBookId]) quizRewarded[currentBookId] = {};
+            const currentAwarded = quizRewarded[currentBookId][currentChapterIndex] || 0;
+            if (currentAwarded < maxScoreForChapter) {
                 addScore(5); 
-                quizRewarded[currentChapterIndex] += 5;
+                quizRewarded[currentBookId][currentChapterIndex] = currentAwarded + 5;
             }
         }
     }
@@ -1126,12 +1853,7 @@
         
         const nextBtn = document.getElementById('btnNextQuiz');
         nextBtn.classList.remove('hidden');
-        
-        if (currentQuizIndex === currentQuizQuestions.length - 1) {
-            nextBtn.textContent = "Finish Quiz 🏆";
-        } else {
-            nextBtn.textContent = "Next Question ➡️";
-        }
+        nextBtn.textContent = (currentQuizIndex === currentQuizQuestions.length - 1) ? "Finish Quiz 🏆" : "Next Question ➡️";
     }
 
     function lockQuizOptions() {
@@ -1143,7 +1865,7 @@
     }
 
     function nextQuizQuestion() {
-        const chState = getChapterState(currentChapterIndex);
+        const chState = getChapterState(currentBookId, currentChapterIndex);
 
         if (currentQuizIndex < currentQuizQuestions.length - 1) {
             currentQuizIndex++;
@@ -1157,21 +1879,17 @@
         }
     }
 
-    // --- Fill in the Blank Module with Fixed Questions & Option A ---
     function renderFitb() {
-      const chState = getChapterState(currentChapterIndex);
+      const chState = getChapterState(currentBookId, currentChapterIndex);
 
-      if (!fitbRewarded[currentChapterIndex]) {
-          fitbRewarded[currentChapterIndex] = 0; 
-      }
+      if (!fitbRewarded[currentBookId]) fitbRewarded[currentBookId] = {};
+      if (!fitbRewarded[currentBookId][currentChapterIndex]) fitbRewarded[currentBookId][currentChapterIndex] = 0; 
 
-      // If already completed, show completed screen
       if (chState.fitb.isCompleted) {
         showFitbCompletedScreen();
         return;
       }
 
-      // If this chapter doesn't have generated questions yet, generate and save them
       if (!chState.fitb.questions || chState.fitb.questions.length === 0) {
         generateFitbQuestionsForChapter(currentChapterIndex);
       }
@@ -1180,7 +1898,7 @@
       document.getElementById('totalFitbNumber').textContent = currentFitbQuestions.length;
 
       if (currentFitbQuestions.length === 0) {
-          document.getElementById('fitbContainer').innerHTML = '<div class="p-4 text-slate-500">No vocabulary quiz available for this chapter yet.</div>';
+          document.getElementById('fitbContainer').innerHTML = '<div class="p-4 text-slate-500">No vocabulary items found in this chapter to create a fill-in-the-blank test.</div>';
           document.getElementById('btnSubmitFitb').classList.add('hidden');
           document.getElementById('btnShowFitbAnswer').classList.add('hidden');
           document.getElementById('btnNextFitb').classList.add('hidden');
@@ -1188,9 +1906,7 @@
       }
 
       currentFitbIndex = chState.fitb.currentIndex || 0;
-      if (currentFitbIndex >= currentFitbQuestions.length) {
-        currentFitbIndex = currentFitbQuestions.length - 1;
-      }
+      if (currentFitbIndex >= currentFitbQuestions.length) currentFitbIndex = currentFitbQuestions.length - 1;
 
       document.getElementById('fitbContainer').innerHTML = `
           <div class="mb-6">
@@ -1198,12 +1914,13 @@
           </div>
           <div id="fitbOptionsContainer" class="space-y-3"></div>
       `;
-      
       loadFitbQuestion();
     }
 
     function generateFitbQuestionsForChapter(chIdx) {
-      const content = window.chaptersData[chIdx].content;
+      if (!window.chaptersData || !window.chaptersData[chIdx]) return;
+      const content = window.chaptersData[chIdx].content || [];
+
       let candidateWords = [];
       let vocabToSentenceMap = {};
       
@@ -1266,7 +1983,7 @@
           };
       });
 
-      const chState = getChapterState(chIdx);
+      const chState = getChapterState(currentBookId, chIdx);
       chState.fitb.questions = generated;
       chState.fitb.currentIndex = 0;
       chState.fitb.isCompleted = false;
@@ -1279,7 +1996,7 @@
           <div class="text-center py-8">
               <span class="text-6xl mb-4 block">🎓</span>
               <h4 class="text-2xl font-bold text-slate-800">Vocabulary Quiz Completed!</h4>
-              <p class="text-slate-500 mt-2">You mastered all 12 vocabulary fill-in-the-blank questions.</p>
+              <p class="text-slate-500 mt-2">You mastered all vocabulary fill-in-the-blank questions.</p>
               <button onclick="resetAndRetryFitb()" class="mt-6 bg-fuchsia-500 hover:bg-fuchsia-600 text-white font-bold px-8 py-3 rounded-2xl shadow-md transition-transform active:scale-95 text-base">
                 🔄 Reset & Retry Vocab
               </button>
@@ -1292,7 +2009,7 @@
     }
 
     function resetAndRetryFitb() {
-      const chState = getChapterState(currentChapterIndex);
+      const chState = getChapterState(currentBookId, currentChapterIndex);
       chState.fitb.currentIndex = 0;
       chState.fitb.isCompleted = false;
       saveToLocalStorage();
@@ -1351,9 +2068,11 @@
 
         if (isCorrect) {
             const maxScoreForChapter = currentFitbQuestions.length * 5;
-            if (fitbRewarded[currentChapterIndex] < maxScoreForChapter) {
+            if (!fitbRewarded[currentBookId]) fitbRewarded[currentBookId] = {};
+            const currentAwarded = fitbRewarded[currentBookId][currentChapterIndex] || 0;
+            if (currentAwarded < maxScoreForChapter) {
                 addScore(5); 
-                fitbRewarded[currentChapterIndex] += 5;
+                fitbRewarded[currentBookId][currentChapterIndex] = currentAwarded + 5;
             }
         }
     }
@@ -1411,12 +2130,7 @@
         
         const nextBtn = document.getElementById('btnNextFitb');
         nextBtn.classList.remove('hidden');
-        
-        if (currentFitbIndex === currentFitbQuestions.length - 1) {
-            nextBtn.textContent = "Finish Vocab Quiz 🏆";
-        } else {
-            nextBtn.textContent = "Next Question ➡️";
-        }
+        nextBtn.textContent = (currentFitbIndex === currentFitbQuestions.length - 1) ? "Finish Vocab Quiz 🏆" : "Next Question ➡️";
     }
 
     function lockFitbOptions() {
@@ -1428,7 +2142,7 @@
     }
 
     function nextFitbQuestion() {
-        const chState = getChapterState(currentChapterIndex);
+        const chState = getChapterState(currentBookId, currentChapterIndex);
 
         if (currentFitbIndex < currentFitbQuestions.length - 1) {
             currentFitbIndex++;
@@ -1442,8 +2156,21 @@
         }
     }
 
-    // --- Tab Switching with State Preservation ---
+    function setupAutoHideScrollbars() {
+      document.querySelectorAll('.independent-scroll').forEach(el => {
+        let scrollTimer = null;
+        el.addEventListener('scroll', () => {
+          el.classList.add('is-scrolling');
+          if (scrollTimer) clearTimeout(scrollTimer);
+          scrollTimer = setTimeout(() => {
+            el.classList.remove('is-scrolling');
+          }, 700);
+        }, { passive: true });
+      });
+    }
+
     function switchTab(tab) {
+      stopWholeChapterPlayback();
       stopAudioPlayback();
 
       document.getElementById('readerView').classList.add('hidden');
@@ -1451,7 +2178,7 @@
       document.getElementById('quizView').classList.add('hidden');
       document.getElementById('fitbView').classList.add('hidden');
 
-      const inactiveClass = "flex-1 py-3 px-4 rounded-2xl font-bold bg-white text-amber-700 border-2 border-amber-200 transition-transform active:scale-95 whitespace-nowrap";
+      const inactiveClass = "flex-1 py-3 px-3 md:px-4 rounded-2xl font-bold bg-white text-amber-700 border-2 border-amber-200 transition-transform active:scale-95 whitespace-nowrap text-sm md:text-base";
       document.getElementById('tabReader').className = inactiveClass;
       document.getElementById('tabGame').className = inactiveClass;
       document.getElementById('tabQuiz').className = inactiveClass;
@@ -1459,26 +2186,28 @@
 
       if (tab === 'reader') {
         document.getElementById('readerView').classList.remove('hidden');
-        document.getElementById('tabReader').className = "flex-1 py-3 px-4 rounded-2xl font-bold bg-amber-500 text-white shadow-md transition-transform active:scale-95 whitespace-nowrap";
+        document.getElementById('tabReader').className = "flex-1 py-3 px-3 md:px-4 rounded-2xl font-bold bg-amber-500 text-white shadow-md transition-transform active:scale-95 whitespace-nowrap text-sm md:text-base";
       } else if (tab === 'game') {
         document.getElementById('gameView').classList.remove('hidden');
-        document.getElementById('tabGame').className = "flex-1 py-3 px-4 rounded-2xl font-bold bg-indigo-500 text-white shadow-md transition-transform active:scale-95 whitespace-nowrap";
+        document.getElementById('tabGame').className = "flex-1 py-3 px-3 md:px-4 rounded-2xl font-bold bg-indigo-500 text-white shadow-md transition-transform active:scale-95 whitespace-nowrap text-sm md:text-base";
         initPuzzle();
       } else if (tab === 'quiz') {
         document.getElementById('quizView').classList.remove('hidden');
-        document.getElementById('tabQuiz').className = "flex-1 py-3 px-4 rounded-2xl font-bold bg-blue-500 text-white shadow-md transition-transform active:scale-95 whitespace-nowrap";
-        renderQuiz(); // Resumes saved progress directly
+        document.getElementById('tabQuiz').className = "flex-1 py-3 px-3 md:px-4 rounded-2xl font-bold bg-blue-500 text-white shadow-md transition-transform active:scale-95 whitespace-nowrap text-sm md:text-base";
+        renderQuiz();
       } else if (tab === 'fitb') {
         document.getElementById('fitbView').classList.remove('hidden');
-        document.getElementById('tabFitb').className = "flex-1 py-3 px-4 rounded-2xl font-bold bg-fuchsia-500 text-white shadow-md transition-transform active:scale-95 whitespace-nowrap";
-        renderFitb(); // Resumes saved progress directly with fixed questions
+        document.getElementById('tabFitb').className = "flex-1 py-3 px-3 md:px-4 rounded-2xl font-bold bg-fuchsia-500 text-white shadow-md transition-transform active:scale-95 whitespace-nowrap text-sm md:text-base";
+        renderFitb();
       }
     }
 
-    window.addEventListener('load', () => {
+    // Application Initialization
+    window.addEventListener('load', async () => {
       loadFromLocalStorage();
-      renderChapterList();
-      loadChapter(0);
+      setupAutoHideScrollbars();
+      await fetchAllBooks();
+      await loadActiveBookContent(currentBookId);
     }); 
   </script>
 </body>

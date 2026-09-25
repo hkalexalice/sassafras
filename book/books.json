@@ -1,0 +1,22 @@
+[
+{
+"id": "1",
+"title": "Dragons and Marshmallows",
+"series": "Book 1",
+"emoji": "🐉",
+"totalChapters": 16
+},
+{
+"id": "2",
+"title": "Monsters and Mold",
+"series": "Book 2",
+"emoji": "🍄",
+"totalChapters": 16
+},
+{
+"id": "3",
+"title": "Merhorses and Bubbles",
+"series": "Book 3",
+"emoji": "🫧",
+"totalChapters": 16
+}

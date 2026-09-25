@@ -1,0 +1,11 @@
+{
+  "name": "zoey-and-sassafras-reader",
+  "version": "1.0.0",
+  "description": "Zoey and Sassafras Reading Assistant with Netlify Blobs Cloud Library",
+  "scripts": {
+    "build": "echo 'Build complete'"
+  },
+  "dependencies": {
+    "@netlify/blobs": "^8.1.0"
+  }
+}

@@ -161,7 +161,7 @@
         <button onclick="switchTab('reader')" id="tabReader" class="flex-1 py-3 px-3 md:px-4 rounded-2xl font-bold bg-amber-500 text-white shadow-md transition-transform active:scale-95 whitespace-nowrap text-sm md:text-base">📖 Read Story</button>
         <button onclick="switchTab('game')" id="tabGame" class="flex-1 py-3 px-3 md:px-4 rounded-2xl font-bold bg-white text-amber-700 border-2 border-amber-200 transition-transform active:scale-95 whitespace-nowrap text-sm md:text-base">🧩 Grammar Puzzle</button>
         <button onclick="switchTab('quiz')" id="tabQuiz" class="flex-1 py-3 px-3 md:px-4 rounded-2xl font-bold bg-white text-amber-700 border-2 border-amber-200 transition-transform active:scale-95 whitespace-nowrap text-sm md:text-base">📝 Chapter Quiz</button>
-        <button onclick="switchTab('fitb')" id="tabFitb" class="flex-1 py-3 px-3 md:px-4 rounded-2xl font-bold bg-white text-amber-700 border-2 border-amber-200 transition-transform active:scale-95 whitespace-nowrap text-sm md:text-base">✏️ Fill in the Blank</button>
+        <button onclick="switchTab('fitb')" id="tabFitb" class="flex-1 py-3 px-4 rounded-2xl font-bold bg-white text-amber-700 border-2 border-amber-200 transition-transform active:scale-95 whitespace-nowrap text-sm md:text-base">✏️ Fill in the Blank</button>
       </div>
 
       <!-- Right Scrollable Container -->
@@ -322,7 +322,19 @@
       
       <div class="mb-4">
         <input type="password" id="inputAdminPassword" placeholder="Enter Admin Password..." class="w-full text-center px-4 py-3 rounded-xl border-2 border-slate-200 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 text-base font-bold text-slate-800" onkeydown="if(event.key==='Enter') verifyAdminPassword()">
-        <p id="adminAuthError" class="text-xs text-rose-500 font-bold mt-2 hidden leading-relaxed text-left bg-rose-50 p-2.5 rounded-lg border border-rose-200"></p>
+        
+        <!-- Error Message / Diagnosis Container -->
+        <div id="adminAuthError" class="text-xs text-rose-600 font-medium mt-3 hidden text-left bg-rose-50 p-3 rounded-xl border border-rose-200 space-y-2">
+          <p id="adminAuthErrorText" class="font-bold"></p>
+          <div id="localBypassBox" class="hidden pt-2 border-t border-rose-200">
+            <p class="text-[11px] text-slate-600 leading-relaxed mb-2">
+              💡 <strong>Local Environment Detected</strong>: You are viewing this locally where Netlify Serverless Functions do not run.
+            </p>
+            <button onclick="enterLocalPreviewMode()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-1.5 px-3 rounded-lg text-xs shadow-xs transition-colors">
+              Enter Local Preview Mode 🚀
+            </button>
+          </div>
+        </div>
       </div>
 
       <div class="flex space-x-2">
@@ -344,7 +356,7 @@
           <span class="text-2xl">⚙️</span>
           <div>
             <h3 class="text-lg font-bold text-slate-800">Netlify Blobs Cloud Library Admin</h3>
-            <p class="text-xs text-emerald-600 font-bold">● Authorized Administrator (Session Active)</p>
+            <p id="adminSessionStatus" class="text-xs text-emerald-600 font-bold">● Authorized Administrator (Session Active)</p>
           </div>
         </div>
         <button onclick="closeAdminPortal()" class="text-slate-400 hover:text-slate-600 text-2xl font-bold px-2">&times;</button>
@@ -512,6 +524,12 @@
 
     const audioCache = new Map();
     let parsedZipBundle = null;
+    let isLocalPreviewMode = false;
+
+    function isRunningLocally() {
+      const h = window.location.hostname;
+      return window.location.protocol === 'file:' || h === 'localhost' || h === '127.0.0.1' || h.startsWith('192.168.') || h.endsWith('.local');
+    }
 
     function showTtsError(msg) {
       const banner = document.getElementById('ttsErrorBanner');
@@ -527,16 +545,44 @@
       if (banner) banner.classList.add('hidden');
     }
 
+    // Helper to query Netlify function with fallback between /.netlify/functions/ and /api/
+    async function callFunction(funcName, options = {}) {
+      const endpoints = [
+        `/.netlify/functions/${funcName}`,
+        `/api/${funcName}`
+      ];
+
+      let lastError = null;
+      for (const endpoint of endpoints) {
+        try {
+          const res = await fetch(endpoint, options);
+          if (res.status !== 404) {
+            return res;
+          }
+        } catch (err) {
+          lastError = err;
+        }
+      }
+
+      // If all returned 404
+      return {
+        ok: false,
+        status: 404,
+        json: async () => ({ error: "Endpoint not found (HTTP 404)." })
+      };
+    }
+
     // ==========================================
     // 🔐 ADMIN GATEWAY & PASSWORD PROTECTION
     // ==========================================
     function openAdminGateway() {
       const savedPass = sessionStorage.getItem('adminKeySession');
-      if (savedPass) {
+      if (savedPass || isLocalPreviewMode) {
         openAdminPortal();
       } else {
         document.getElementById('inputAdminPassword').value = '';
         document.getElementById('adminAuthError').classList.add('hidden');
+        document.getElementById('localBypassBox').classList.add('hidden');
         document.getElementById('adminPasswordModal').classList.remove('hidden');
         setTimeout(() => document.getElementById('inputAdminPassword').focus(), 150);
       }
@@ -546,14 +592,25 @@
       document.getElementById('adminPasswordModal').classList.add('hidden');
     }
 
+    function enterLocalPreviewMode() {
+      isLocalPreviewMode = true;
+      sessionStorage.setItem('adminKeySession', 'local_preview_key');
+      closeAdminGateway();
+      openAdminPortal();
+      document.getElementById('adminSessionStatus').textContent = "● Local Preview Mode (Offline Storage)";
+      document.getElementById('adminSessionStatus').className = "text-xs text-amber-600 font-bold";
+    }
+
     async function verifyAdminPassword() {
       const input = document.getElementById('inputAdminPassword').value.trim();
-      const errEl = document.getElementById('adminAuthError');
+      const errBox = document.getElementById('adminAuthError');
+      const errText = document.getElementById('adminAuthErrorText');
+      const localBox = document.getElementById('localBypassBox');
       const btn = document.getElementById('btnVerifyPassword');
 
       if (!input) {
-        errEl.textContent = "Please enter the admin password.";
-        errEl.classList.remove('hidden');
+        errText.textContent = "Please enter the admin password.";
+        errBox.classList.remove('hidden');
         return;
       }
 
@@ -561,7 +618,7 @@
       btn.innerHTML = '<span class="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>';
 
       try {
-        const res = await fetch('/.netlify/functions/admin_auth', {
+        const res = await callFunction('admin_auth', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ password: input })
@@ -573,16 +630,23 @@
           sessionStorage.setItem('adminKeySession', input);
           closeAdminGateway();
           openAdminPortal();
+        } else if (res.status === 404) {
+          errText.textContent = "Serverless Function not found (HTTP 404). Netlify functions only run when deployed to Netlify or with 'netlify dev'.";
+          errBox.classList.remove('hidden');
+
+          if (isRunningLocally()) {
+            localBox.classList.remove('hidden');
+          }
         } else {
-          const detail = data.error || (res.status === 404 
-            ? "Authentication endpoint not found (HTTP 404). Please ensure Netlify functions are deployed." 
-            : `Authentication failed (HTTP ${res.status}). Please check your password.`);
-          errEl.textContent = detail;
-          errEl.classList.remove('hidden');
+          errText.textContent = data.error || `Authentication failed (HTTP ${res.status}). Please verify your password.`;
+          errBox.classList.remove('hidden');
         }
       } catch (err) {
-        errEl.textContent = `Unable to connect to server: ${err.message}`;
-        errEl.classList.remove('hidden');
+        errText.textContent = `Unable to connect to server: ${err.message}`;
+        errBox.classList.remove('hidden');
+        if (isRunningLocally()) {
+          localBox.classList.remove('hidden');
+        }
       } finally {
         btn.disabled = false;
         btn.innerHTML = '<span>Unlock</span> <span>🔓</span>';
@@ -720,8 +784,32 @@
       btn.disabled = true;
       btn.innerHTML = '<span class="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span> Saving...';
 
+      // If in local preview mode, save directly to browser localStorage
+      if (isLocalPreviewMode) {
+        try {
+          const localLibrary = JSON.parse(localStorage.getItem('zoey_local_blob_library') || '[]');
+          const existingIdx = localLibrary.findIndex(b => String(b.metadata.id) === String(parsedZipBundle.metadata.id));
+          if (existingIdx !== -1) {
+            localLibrary[existingIdx] = parsedZipBundle;
+          } else {
+            localLibrary.push(parsedZipBundle);
+          }
+          localStorage.setItem('zoey_local_blob_library', JSON.stringify(localLibrary));
+          alert(`🎉 [Local Preview] "${parsedZipBundle.metadata.title}" saved to local browser storage!`);
+          await fetchAllBooks();
+          closeAdminPortal();
+          switchBook(parsedZipBundle.metadata.id);
+        } catch (e) {
+          alert(`Failed to save locally: ${e.message}`);
+        } finally {
+          btn.disabled = false;
+          btn.innerHTML = '<span>Save to Netlify Blobs</span> <span>🚀</span>';
+        }
+        return;
+      }
+
       try {
-        const res = await fetch('/.netlify/functions/manage_blob_books', {
+        const res = await callFunction('manage_blob_books', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -740,7 +828,7 @@
           closeAdminPortal();
           switchBook(parsedZipBundle.metadata.id);
         } else {
-          alert(`❌ Upload failed: ${data.error || "Server returned an error."}`);
+          alert(`❌ Upload failed: ${data.error || "Server returned an error (HTTP " + res.status + ")."}`);
         }
       } catch (err) {
         alert(`❌ Network error: ${err.message}`);
@@ -752,11 +840,39 @@
 
     async function refreshBlobBooksList() {
       const container = document.getElementById('blobBooksContainer');
-      container.innerHTML = '<div class="p-4 text-center text-xs text-slate-400">Fetching books from Netlify Blobs...</div>';
+      container.innerHTML = '<div class="p-4 text-center text-xs text-slate-400">Fetching books...</div>';
+
+      if (isLocalPreviewMode) {
+        const localLibrary = JSON.parse(localStorage.getItem('zoey_local_blob_library') || '[]');
+        if (localLibrary.length === 0) {
+          container.innerHTML = '<div class="p-6 text-center text-xs text-slate-500 bg-slate-50 rounded-2xl">No preview books saved in browser. Upload a ZIP above to test!</div>';
+          return;
+        }
+        container.innerHTML = '';
+        localLibrary.forEach(item => {
+          const b = item.metadata;
+          const el = document.createElement('div');
+          el.className = "flex items-center justify-between p-3.5 bg-slate-50 border border-slate-200 rounded-2xl";
+          el.innerHTML = `
+            <div class="flex items-center gap-3">
+              <span class="text-2xl">${b.emoji || '📖'}</span>
+              <div>
+                <p class="font-bold text-sm text-slate-800">${b.series}: ${b.title}</p>
+                <p class="text-[11px] text-slate-500 font-mono">ID: ${b.id} • ${item.chapters.length} Chapters • Local Preview</p>
+              </div>
+            </div>
+            <button onclick="deleteBlobBook('${b.id}', '${b.title}')" class="bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold px-3 py-1.5 rounded-xl text-xs transition-colors border border-rose-200">
+              🗑️ Delete
+            </button>
+          `;
+          container.appendChild(el);
+        });
+        return;
+      }
 
       try {
-        const res = await fetch('/.netlify/functions/manage_blob_books');
-        const data = await res.json();
+        const res = await callFunction('manage_blob_books');
+        const data = await res.json().catch(() => ({}));
         const blobBooks = data.books || [];
 
         if (blobBooks.length === 0) {
@@ -788,11 +904,21 @@
     }
 
     async function deleteBlobBook(bId, bTitle) {
-      if (!confirm(`Are you sure you want to permanently delete "${bTitle}" from Netlify Blobs?`)) return;
+      if (!confirm(`Are you sure you want to delete "${bTitle}"?`)) return;
+
+      if (isLocalPreviewMode) {
+        let localLibrary = JSON.parse(localStorage.getItem('zoey_local_blob_library') || '[]');
+        localLibrary = localLibrary.filter(b => String(b.metadata.id) !== String(bId));
+        localStorage.setItem('zoey_local_blob_library', JSON.stringify(localLibrary));
+        await fetchAllBooks();
+        refreshBlobBooksList();
+        if (String(currentBookId) === String(bId)) switchBook("1");
+        return;
+      }
 
       const password = sessionStorage.getItem('adminKeySession');
       try {
-        const res = await fetch('/.netlify/functions/manage_blob_books', {
+        const res = await callFunction('manage_blob_books', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -811,7 +937,7 @@
             switchBook("1");
           }
         } else {
-          alert(`Deletion failed: ${data.error}`);
+          alert(`Deletion failed: ${data.error || 'Server error'}`);
         }
       } catch (err) {
         alert(`Network error: ${err.message}`);
@@ -912,20 +1038,38 @@
         }
       ];
 
-      try {
-        const res = await fetch('/.netlify/functions/manage_blob_books');
-        if (res.ok) {
-          const data = await res.json();
-          if (Array.isArray(data.books)) {
-            data.books.forEach(b => {
-              if (String(b.id) !== "1") {
-                availableBooks.push(b);
-              }
-            });
-          }
+      // Check local preview library in localStorage
+      const localLibrary = JSON.parse(localStorage.getItem('zoey_local_blob_library') || '[]');
+      localLibrary.forEach(item => {
+        if (String(item.metadata.id) !== "1") {
+          availableBooks.push({
+            id: String(item.metadata.id),
+            title: item.metadata.title,
+            series: item.metadata.series || `Book ${item.metadata.id}`,
+            emoji: item.metadata.emoji || "📖",
+            totalChapters: item.chapters.length,
+            source: "local_blob"
+          });
         }
-      } catch (e) {
-        console.log("Netlify Blobs manifest lookup offline or pending:", e.message);
+      });
+
+      // Try fetching from Netlify Blobs if on remote server
+      if (!isLocalPreviewMode) {
+        try {
+          const res = await callFunction('manage_blob_books');
+          if (res.ok) {
+            const data = await res.json();
+            if (Array.isArray(data.books)) {
+              data.books.forEach(b => {
+                if (String(b.id) !== "1" && !availableBooks.some(eb => String(eb.id) === String(b.id))) {
+                  availableBooks.push(b);
+                }
+              });
+            }
+          }
+        } catch (e) {
+          console.log("Netlify Blobs manifest lookup offline or pending:", e.message);
+        }
       }
 
       populateBookDropdown();
@@ -981,10 +1125,18 @@
           scriptPromises.push(injectScriptTag(`book/1/quiz/quiz${i}.js`));
         }
         await Promise.allSettled(scriptPromises);
+      } else if (book.source === "local_blob") {
+        // Load from local storage preview
+        const localLibrary = JSON.parse(localStorage.getItem('zoey_local_blob_library') || '[]');
+        const matched = localLibrary.find(b => String(b.metadata.id) === String(bId));
+        if (matched) {
+          window.chaptersData = matched.chapters || [];
+          window.quizzesData = matched.quizzes || {};
+        }
       } else {
         // Load from Netlify Blobs
         try {
-          const res = await fetch(`/.netlify/functions/get_blob_book?id=${bId}`);
+          const res = await callFunction(`get_blob_book?id=${bId}`);
           if (res.ok) {
             const bundle = await res.json();
             window.chaptersData = bundle.chapters || [];
@@ -1420,7 +1572,7 @@
 
       if (!cached) {
         try {
-          const response = await fetch('/.netlify/functions/speak', {
+          const response = await callFunction('speak', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ text: text })
@@ -2198,7 +2350,7 @@
         renderQuiz();
       } else if (tab === 'fitb') {
         document.getElementById('fitbView').classList.remove('hidden');
-        document.getElementById('tabFitb').className = "flex-1 py-3 px-3 md:px-4 rounded-2xl font-bold bg-fuchsia-500 text-white shadow-md transition-transform active:scale-95 whitespace-nowrap text-sm md:text-base";
+        document.getElementById('tabFitb').className = "flex-1 py-3 px-4 rounded-2xl font-bold bg-fuchsia-500 text-white shadow-md transition-transform active:scale-95 whitespace-nowrap text-sm md:text-base";
         renderFitb();
       }
     }

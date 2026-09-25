@@ -126,8 +126,8 @@
       </div>
 
       <!-- Password-Protected Admin Portal Button -->
-      <button onclick="openAdminGateway()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-3 py-2 rounded-xl shadow-xs transition-transform active:scale-95 flex items-center gap-1.5" title="後台管理（需密碼）">
-        <span>🔐</span> <span>後台管理</span>
+      <button onclick="openAdminGateway()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-3 py-2 rounded-xl shadow-xs transition-transform active:scale-95 flex items-center gap-1.5" title="Admin Portal (Password Required)">
+        <span>🔐</span> <span>Admin Portal</span>
       </button>
 
       <!-- Auto-save Status Indicator -->
@@ -317,18 +317,18 @@
   <div id="adminPasswordModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center hidden p-4 z-50">
     <div class="bg-white max-w-sm w-full p-6 md:p-8 rounded-3xl shadow-2xl border-2 border-indigo-200 text-center relative">
       <div class="w-14 h-14 bg-indigo-100 text-indigo-700 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-3">🔐</div>
-      <h3 class="text-xl font-bold text-slate-800 mb-1">後台管理員認證</h3>
-      <p class="text-xs text-slate-500 mb-5">請輸入管理員密碼（比對 Netlify 之 <code class="bg-slate-100 px-1 py-0.5 rounded text-indigo-700 font-mono">addspellingkey</code>）</p>
+      <h3 class="text-xl font-bold text-slate-800 mb-1">Admin Authentication</h3>
+      <p class="text-xs text-slate-500 mb-5">Please enter the admin password configured in Netlify's <code class="bg-slate-100 px-1 py-0.5 rounded text-indigo-700 font-mono">addspellingkey</code></p>
       
       <div class="mb-4">
-        <input type="password" id="inputAdminPassword" placeholder="Enter Password..." class="w-full text-center px-4 py-3 rounded-xl border-2 border-slate-200 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 text-base font-bold text-slate-800" onkeydown="if(event.key==='Enter') verifyAdminPassword()">
-        <p id="adminAuthError" class="text-xs text-rose-500 font-bold mt-2 hidden"></p>
+        <input type="password" id="inputAdminPassword" placeholder="Enter Admin Password..." class="w-full text-center px-4 py-3 rounded-xl border-2 border-slate-200 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 text-base font-bold text-slate-800" onkeydown="if(event.key==='Enter') verifyAdminPassword()">
+        <p id="adminAuthError" class="text-xs text-rose-500 font-bold mt-2 hidden leading-relaxed text-left bg-rose-50 p-2.5 rounded-lg border border-rose-200"></p>
       </div>
 
       <div class="flex space-x-2">
-        <button onclick="closeAdminGateway()" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-2.5 rounded-xl text-sm transition-colors">取消</button>
+        <button onclick="closeAdminGateway()" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-2.5 rounded-xl text-sm transition-colors">Cancel</button>
         <button id="btnVerifyPassword" onclick="verifyAdminPassword()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 rounded-xl text-sm shadow-md transition-transform active:scale-95 flex items-center justify-center gap-1">
-          <span>解鎖</span> <span>🔓</span>
+          <span>Unlock</span> <span>🔓</span>
         </button>
       </div>
     </div>
@@ -343,8 +343,8 @@
         <div class="flex items-center gap-2">
           <span class="text-2xl">⚙️</span>
           <div>
-            <h3 class="text-lg font-bold text-slate-800">Netlify Blobs 雲端書庫管理後台</h3>
-            <p class="text-xs text-emerald-600 font-bold">● 已授權管理員 (Session Active)</p>
+            <h3 class="text-lg font-bold text-slate-800">Netlify Blobs Cloud Library Admin</h3>
+            <p class="text-xs text-emerald-600 font-bold">● Authorized Administrator (Session Active)</p>
           </div>
         </div>
         <button onclick="closeAdminPortal()" class="text-slate-400 hover:text-slate-600 text-2xl font-bold px-2">&times;</button>
@@ -352,21 +352,21 @@
 
       <!-- Action Tabs -->
       <div class="flex border-b border-slate-200 mb-5 text-sm font-bold">
-        <button id="tabAdminUpload" onclick="switchAdminSubTab('upload')" class="py-2 px-4 border-b-2 border-indigo-600 text-indigo-700">📦 上傳新書 ZIP</button>
-        <button id="tabAdminList" onclick="switchAdminSubTab('list')" class="py-2 px-4 border-b-2 border-transparent text-slate-500 hover:text-slate-700">📚 現有雲端書籍</button>
-        <button id="tabAdminTpl" onclick="switchAdminSubTab('template')" class="py-2 px-4 border-b-2 border-transparent text-slate-500 hover:text-slate-700">📥 下載 ZIP 範本</button>
+        <button id="tabAdminUpload" onclick="switchAdminSubTab('upload')" class="py-2 px-4 border-b-2 border-indigo-600 text-indigo-700">📦 Upload Book ZIP</button>
+        <button id="tabAdminList" onclick="switchAdminSubTab('list')" class="py-2 px-4 border-b-2 border-transparent text-slate-500 hover:text-slate-700">📚 Cloud Books</button>
+        <button id="tabAdminTpl" onclick="switchAdminSubTab('template')" class="py-2 px-4 border-b-2 border-transparent text-slate-500 hover:text-slate-700">📥 Download ZIP Template</button>
       </div>
 
       <!-- SUB-PANEL 1: ZIP UPLOADER -->
       <div id="adminSubUpload" class="space-y-4">
         <div class="border-2 border-dashed border-indigo-200 bg-indigo-50/50 p-6 rounded-2xl text-center">
           <div class="text-4xl mb-2">📦</div>
-          <p class="text-sm font-bold text-indigo-950 mb-1">選取含有全書 16 章 JSON 的 ZIP 壓縮檔</p>
-          <p class="text-xs text-indigo-600 mb-4">系統會自動解析 ZIP 內的 <code class="bg-indigo-100 px-1 py-0.5 rounded">chapter1~16.json</code> 與 <code class="bg-indigo-100 px-1 py-0.5 rounded">quiz1~16.json</code></p>
+          <p class="text-sm font-bold text-indigo-950 mb-1">Select a ZIP archive containing all 16 chapter JSON files</p>
+          <p class="text-xs text-indigo-600 mb-4">The system extracts <code class="bg-indigo-100 px-1 py-0.5 rounded">chapter1~16.json</code> and <code class="bg-indigo-100 px-1 py-0.5 rounded">quiz1~16.json</code> directly in your browser.</p>
           
           <input type="file" id="zipFileInput" accept=".zip" class="hidden" onchange="handleZipSelected(event)">
           <button onclick="document.getElementById('zipFileInput').click()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm px-6 py-2.5 rounded-xl shadow-sm transition-transform active:scale-95 inline-flex items-center gap-1.5">
-            <span>選擇 ZIP 檔案</span> <span>📁</span>
+            <span>Choose ZIP File</span> <span>📁</span>
           </button>
           <span id="selectedZipName" class="block text-xs font-bold text-slate-600 mt-2 truncate"></span>
         </div>
@@ -374,29 +374,29 @@
         <!-- ZIP Analysis Result Preview -->
         <div id="zipPreviewArea" class="hidden bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-3 text-xs">
           <div class="flex items-center justify-between">
-            <span class="font-bold text-slate-700">📊 ZIP 解析結果：</span>
+            <span class="font-bold text-slate-700">📊 ZIP Inspection Result:</span>
             <span id="zipStatusBadge" class="bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-md">16 Chapters Ready</span>
           </div>
           
           <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-slate-600 font-mono">
-            <div>內文章節: <strong id="countChapters" class="text-indigo-600">0</strong></div>
-            <div>測驗檔案: <strong id="countQuizzes" class="text-indigo-600">0</strong></div>
-            <div>單字題型: <strong id="countVocab" class="text-indigo-600">自動生成</strong></div>
-            <div>來源格式: <strong class="text-emerald-600">JSON</strong></div>
+            <div>Chapters: <strong id="countChapters" class="text-indigo-600">0</strong></div>
+            <div>Quizzes: <strong id="countQuizzes" class="text-indigo-600">0</strong></div>
+            <div>Vocab FITB: <strong class="text-indigo-600">Auto-generated</strong></div>
+            <div>Source: <strong class="text-emerald-600">JSON</strong></div>
           </div>
 
           <!-- Metadata Override Fields -->
           <div class="pt-2 border-t border-slate-200 grid grid-cols-1 sm:grid-cols-3 gap-2">
             <div>
-              <label class="block text-[11px] font-bold text-slate-500 mb-0.5">Book ID (數字):</label>
+              <label class="block text-[11px] font-bold text-slate-500 mb-0.5">Book ID (Number):</label>
               <input type="number" id="inputMetaId" class="w-full px-2 py-1.5 rounded-lg border border-slate-300 font-bold text-slate-800 text-xs">
             </div>
             <div>
-              <label class="block text-[11px] font-bold text-slate-500 mb-0.5">書名 (Title):</label>
+              <label class="block text-[11px] font-bold text-slate-500 mb-0.5">Book Title:</label>
               <input type="text" id="inputMetaTitle" class="w-full px-2 py-1.5 rounded-lg border border-slate-300 font-bold text-slate-800 text-xs">
             </div>
             <div>
-              <label class="block text-[11px] font-bold text-slate-500 mb-0.5">Emoji 代表圖示:</label>
+              <label class="block text-[11px] font-bold text-slate-500 mb-0.5">Emoji Icon:</label>
               <input type="text" id="inputMetaEmoji" class="w-full px-2 py-1.5 rounded-lg border border-slate-300 font-bold text-slate-800 text-xs">
             </div>
           </div>
@@ -404,29 +404,29 @@
 
         <div class="flex justify-end gap-2 pt-2">
           <button id="btnUploadToBlob" onclick="uploadZipToNetlifyBlob()" disabled class="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold px-6 py-2.5 rounded-xl text-sm shadow-md transition-transform active:scale-95 flex items-center gap-1.5">
-            <span>寫入 Netlify Blobs</span> <span>🚀</span>
+            <span>Save to Netlify Blobs</span> <span>🚀</span>
           </button>
         </div>
       </div>
 
       <!-- SUB-PANEL 2: EXISTING BLOB BOOKS -->
       <div id="adminSubList" class="hidden space-y-3">
-        <p class="text-xs text-slate-500">以下為儲存於 Netlify Blobs 持久層中的書籍。刪除後即時自雲端移除：</p>
+        <p class="text-xs text-slate-500">Books stored in Netlify Blobs persistent storage. Deleting will immediately remove them from the cloud library:</p>
         <div id="blobBooksContainer" class="space-y-2 max-h-64 overflow-y-auto pr-1 independent-scroll">
-          <div class="p-4 text-center text-xs text-slate-400">載入中...</div>
+          <div class="p-4 text-center text-xs text-slate-400">Loading...</div>
         </div>
       </div>
 
       <!-- SUB-PANEL 3: TEMPLATE GENERATOR -->
       <div id="adminSubTemplate" class="hidden space-y-4">
         <div class="bg-amber-50 p-4 rounded-2xl border border-amber-200 text-xs text-amber-900 leading-relaxed">
-          <strong class="block text-sm font-bold mb-1">💡 如何準備您的 ZIP 檔案？</strong>
-          請下載下方的標準 ZIP 範本。解壓縮後將包含 16 個章節的 <code class="font-mono bg-white px-1 py-0.5 rounded">chapterX.json</code> 與 16 個 <code class="font-mono bg-white px-1 py-0.5 rounded">quizX.json</code> 範本，編輯後重新壓縮為 ZIP 即可在上方分頁直接上傳！
+          <strong class="block text-sm font-bold mb-1">💡 How to prepare your ZIP file?</strong>
+          Download the standard template below. Unzip it to find 16 <code class="font-mono bg-white px-1 py-0.5 rounded">chapterX.json</code> and 16 <code class="font-mono bg-white px-1 py-0.5 rounded">quizX.json</code> files. Edit the stories and questions, compress them back into a ZIP, and upload them in the first tab!
         </div>
 
         <div class="flex justify-center pt-2">
           <button onclick="downloadSampleZipTemplate()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-6 py-3 rounded-xl text-sm shadow-md transition-transform active:scale-95 flex items-center gap-2">
-            <span>下載標準全書 ZIP 範本 (16章 JSON)</span> <span>📥</span>
+            <span>Download Sample Book ZIP Template (16-Chapter JSON)</span> <span>📥</span>
           </button>
         </div>
       </div>
@@ -460,7 +460,7 @@
   <div id="ttsErrorBanner" class="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 max-w-md bg-rose-600 text-white p-4 rounded-2xl shadow-xl z-50 text-sm hidden transition-all">
     <div class="flex items-start justify-between gap-2">
       <div>
-        <p class="font-bold mb-1">⚠️ Speechify 語音連線提示</p>
+        <p class="font-bold mb-1">⚠️ Speechify Audio Notice</p>
         <p id="ttsErrorMessage" class="text-xs text-rose-100 leading-relaxed"></p>
       </div>
       <button onclick="dismissTtsBanner()" class="text-white hover:text-rose-200 text-lg font-bold px-2 py-0.5">✕</button>
@@ -511,8 +511,6 @@
     let wholeChapterIndex = -1;
 
     const audioCache = new Map();
-
-    // Parsed ZIP memory store before upload
     let parsedZipBundle = null;
 
     function showTtsError(msg) {
@@ -554,7 +552,7 @@
       const btn = document.getElementById('btnVerifyPassword');
 
       if (!input) {
-        errEl.textContent = "請輸入密碼！";
+        errEl.textContent = "Please enter the admin password.";
         errEl.classList.remove('hidden');
         return;
       }
@@ -576,15 +574,18 @@
           closeAdminGateway();
           openAdminPortal();
         } else {
-          errEl.textContent = data.error || "密碼錯誤，請再試一次。";
+          const detail = data.error || (res.status === 404 
+            ? "Authentication endpoint not found (HTTP 404). Please ensure Netlify functions are deployed." 
+            : `Authentication failed (HTTP ${res.status}). Please check your password.`);
+          errEl.textContent = detail;
           errEl.classList.remove('hidden');
         }
       } catch (err) {
-        errEl.textContent = `無法連線至驗證伺服器: ${err.message}`;
+        errEl.textContent = `Unable to connect to server: ${err.message}`;
         errEl.classList.remove('hidden');
       } finally {
         btn.disabled = false;
-        btn.innerHTML = '<span>解鎖</span> <span>🔓</span>';
+        btn.innerHTML = '<span>Unlock</span> <span>🔓</span>';
       }
     }
 
@@ -645,7 +646,7 @@
           try { meta = JSON.parse(metaText); } catch(e){}
         }
 
-        // Search for chapter JSONs: chapter1.json ... chapter16.json
+        // Search for chapter JSONs: chapter1.json ... chapter24.json
         for (let i = 1; i <= 24; i++) {
           const chFile = zip.file(new RegExp(`(^|/|context/)chapter${i}\\.json$`, 'i'))[0];
           if (chFile) {
@@ -658,7 +659,7 @@
             }
           }
 
-          // Search for quiz JSONs: quiz1.json ... quiz16.json
+          // Search for quiz JSONs: quiz1.json ... quiz24.json
           const qFile = zip.file(new RegExp(`(^|/|quiz/)quiz${i}\\.json$`, 'i'))[0];
           if (qFile) {
             const qJsonText = await qFile.async("string");
@@ -674,7 +675,7 @@
         chapters.sort((a, b) => (Number(a.chapterId) || 0) - (Number(b.chapterId) || 0));
 
         if (chapters.length === 0) {
-          alert("ZIP 檔案中未發現任何符合格式的 chapter1.json ～ chapter16.json！請檢查檔案名稱。");
+          alert("No matching chapter1.json ~ chapter16.json files found in this ZIP archive! Please check file names.");
           return;
         }
 
@@ -700,7 +701,7 @@
         document.getElementById('btnUploadToBlob').disabled = false;
 
       } catch (err) {
-        alert("無法讀取此 ZIP 檔案，請確認是否為標準 ZIP 格式: " + err.message);
+        alert("Unable to read this ZIP archive. Please ensure it is a valid ZIP format: " + err.message);
       }
     }
 
@@ -717,7 +718,7 @@
       parsedZipBundle.metadata.series = `Book ${parsedZipBundle.metadata.id}`;
 
       btn.disabled = true;
-      btn.innerHTML = '<span class="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span> 寫入中...';
+      btn.innerHTML = '<span class="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span> Saving...';
 
       try {
         const res = await fetch('/.netlify/functions/manage_blob_books', {
@@ -734,24 +735,24 @@
         const data = await res.json().catch(() => ({}));
 
         if (res.ok && data.success) {
-          alert(`🎉 恭喜！《${parsedZipBundle.metadata.title}》已成功上傳至 Netlify Blobs！所有設備已同步。`);
+          alert(`🎉 Success! "${parsedZipBundle.metadata.title}" has been saved to Netlify Blobs! All devices are synchronized.`);
           await fetchAllBooks();
           closeAdminPortal();
           switchBook(parsedZipBundle.metadata.id);
         } else {
-          alert(`❌ 上傳失敗: ${data.error || "伺服器無回應"}`);
+          alert(`❌ Upload failed: ${data.error || "Server returned an error."}`);
         }
       } catch (err) {
-        alert(`❌ 網路錯誤: ${err.message}`);
+        alert(`❌ Network error: ${err.message}`);
       } finally {
         btn.disabled = false;
-        btn.innerHTML = '<span>寫入 Netlify Blobs</span> <span>🚀</span>';
+        btn.innerHTML = '<span>Save to Netlify Blobs</span> <span>🚀</span>';
       }
     }
 
     async function refreshBlobBooksList() {
       const container = document.getElementById('blobBooksContainer');
-      container.innerHTML = '<div class="p-4 text-center text-xs text-slate-400">正在查詢 Netlify Blobs...</div>';
+      container.innerHTML = '<div class="p-4 text-center text-xs text-slate-400">Fetching books from Netlify Blobs...</div>';
 
       try {
         const res = await fetch('/.netlify/functions/manage_blob_books');
@@ -759,7 +760,7 @@
         const blobBooks = data.books || [];
 
         if (blobBooks.length === 0) {
-          container.innerHTML = '<div class="p-6 text-center text-xs text-slate-500 bg-slate-50 rounded-2xl">目前 Netlify Blobs 尚無雲端書籍。請至第一分頁上傳！</div>';
+          container.innerHTML = '<div class="p-6 text-center text-xs text-slate-500 bg-slate-50 rounded-2xl">No cloud books currently in Netlify Blobs. Upload your first book package in the first tab!</div>';
           return;
         }
 
@@ -776,18 +777,18 @@
               </div>
             </div>
             <button onclick="deleteBlobBook('${b.id}', '${b.title}')" class="bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold px-3 py-1.5 rounded-xl text-xs transition-colors border border-rose-200">
-              🗑️ 刪除
+              🗑️ Delete
             </button>
           `;
           container.appendChild(item);
         });
       } catch (err) {
-        container.innerHTML = `<div class="p-4 text-rose-500 text-xs">載入失敗: ${err.message}</div>`;
+        container.innerHTML = `<div class="p-4 text-rose-500 text-xs">Failed to load: ${err.message}</div>`;
       }
     }
 
     async function deleteBlobBook(bId, bTitle) {
-      if (!confirm(`確定要自 Netlify Blobs 永久刪除《${bTitle}》嗎？`)) return;
+      if (!confirm(`Are you sure you want to permanently delete "${bTitle}" from Netlify Blobs?`)) return;
 
       const password = sessionStorage.getItem('adminKeySession');
       try {
@@ -810,10 +811,10 @@
             switchBook("1");
           }
         } else {
-          alert(`刪除失敗: ${data.error}`);
+          alert(`Deletion failed: ${data.error}`);
         }
       } catch (err) {
-        alert(`網路連線異常: ${err.message}`);
+        alert(`Network error: ${err.message}`);
       }
     }
 
@@ -837,15 +838,15 @@
         zip.file(`chapter${i}.json`, JSON.stringify({
           "chapterId": i,
           "titleEn": `Chapter ${i} Title`,
-          "titleZh": `第 ${i} 章 中文標題`,
+          "titleZh": `Chapter ${i} Chinese Title`,
           "content": [
             {
               "en": "Zoey and Sassafras stepped into the forest on a new inquiry mission.",
-              "zh": "柔伊與薩薩弗拉斯踏進森林展開全新的探究任務。",
+              "zh": "Zoey and Sassafras stepped into the forest on a new inquiry mission.",
               "vocab": {
                 "inquiry": {
                   "enMeaning": "an act of asking for information or investigating",
-                  "zh": "探究、調查",
+                  "zh": "investigation, inquiry",
                   "phonetic": "/ɪnˈkwaɪə.ri/",
                   "emoji": "🔍"
                 }
@@ -992,7 +993,7 @@
             throw new Error(`Cloud book not found (${res.status})`);
           }
         } catch (err) {
-          alert(`無法自雲端載入書籍: ${err.message}`);
+          alert(`Failed to load book from cloud: ${err.message}`);
         }
       }
 
@@ -1024,7 +1025,7 @@
 
     function loadFromLocalStorage() {
       try {
-        const savedData = localStorage.getItem('zoeySassafrasCloudBooks_v1');
+        const savedData = localStorage.getItem('zoeySassafrasCloudBooks_v2');
         if (savedData) {
           const parsedData = JSON.parse(savedData);
           score = parsedData.score || 0;
@@ -1056,7 +1057,7 @@
           chaptersState: chaptersState,
           fontSize: currentFontSize
         };
-        localStorage.setItem('zoeySassafrasCloudBooks_v1', JSON.stringify(saveData));
+        localStorage.setItem('zoeySassafrasCloudBooks_v2', JSON.stringify(saveData));
         
         const statusBox = document.getElementById('saveStatusContainer');
         statusBox.classList.add('bg-emerald-100', 'border-emerald-300');
@@ -1440,7 +1441,7 @@
           if (btn) resetSentenceButton(index);
           if (modalIcon) resetModalButton();
           
-          showTtsError(`無法取得 Speechify 語音 (${error.message})，暫時切換為本地發音。`);
+          showTtsError(`Unable to fetch Speechify voice (${error.message}). Temporarily switched to device voice.`);
           fallbackBrowserSpeak(text, index, isWord);
           return;
         }
